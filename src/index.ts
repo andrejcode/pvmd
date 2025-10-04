@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import {
   createServer,
   type IncomingMessage,
@@ -8,9 +9,18 @@ const hostname = '127.0.0.1'
 const port = 3000
 
 const server = createServer((_req: IncomingMessage, res: ServerResponse) => {
-  res.statusCode = 200
-  res.setHeader('Content-Type', 'text/plain')
-  res.end('pvmd')
+  try {
+    const html = readFileSync(
+      new URL('./client/index.html', import.meta.url),
+      'utf8',
+    )
+
+    res.writeHead(200, { 'content-type': 'text/html' })
+    res.end(html)
+  } catch (error) {
+    console.error(error)
+    process.exit(1)
+  }
 })
 
 server.listen(port, hostname, () => {
