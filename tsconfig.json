@@ -3,11 +3,11 @@
   "exclude": ["dist", "node_modules"],
   "compilerOptions": {
     "outDir": "./dist",
-    "module": "nodenext",
+    "module": "esnext",
     "target": "es2020",
+    "moduleResolution": "bundler",
     "lib": ["esnext"],
     "types": ["node"],
-    "sourceMap": true,
     "declaration": true,
     "strict": true,
     "verbatimModuleSyntax": true,
@@ -28,7 +28,6 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "incremental": true
+    "resolveJsonModule": true
   }
 }
