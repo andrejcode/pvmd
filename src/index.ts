@@ -1,34 +1,24 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs'
-import {
-  createServer,
-  type IncomingMessage,
-  type ServerResponse,
-} from 'node:http'
+import { parseArguments } from './cli'
+import { parseMarkdown, readMarkdownFile } from './markdown'
+import { createServer, startServer } from './server'
+import { readHTMLTemplate, injectMarkdown } from './template'
+import { exitWithError } from './utils/process'
 
-const hostname = '127.0.0.1'
-const port = 3000
-
-const server = createServer((_req: IncomingMessage, res: ServerResponse) => {
+try {
   const args = process.argv.slice(2)
-  console.log('Arguments:', args)
+  const { filePath } = parseArguments(args)
 
-  try {
-    const html = readFileSync(
-      new URL('./client/index.html', import.meta.url),
-      'utf8',
-    )
+  const markdownContent = readMarkdownFile(filePath)
+  const parsedMarkdown = parseMarkdown(markdownContent)
 
-    res.writeHead(200, { 'content-type': 'text/html' })
-    res.end(html)
-  } catch (error) {
-    console.error(error)
-    process.exit(1)
-  }
-})
+  const htmlTemplate = readHTMLTemplate()
+  const preparedHTML = injectMarkdown(htmlTemplate, parsedMarkdown)
 
-server.listen(port, hostname, () => {
-  console.log(`Server running at http://${hostname}:${port}/`)
-  console.log(`Started from: ${process.cwd()}`)
-})
+  const server = createServer(preparedHTML)
+  startServer(server)
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error)
+  exitWithError(message)
+}
