@@ -2,6 +2,13 @@ import { readFileSync } from 'node:fs'
 import { marked } from 'marked'
 import xss from 'xss'
 
+marked.use({
+  async: false,
+  breaks: false,
+  gfm: true,
+  pedantic: false,
+})
+
 export function readMarkdownFile(path: string): string {
   try {
     return readFileSync(path, 'utf8')
@@ -33,7 +40,6 @@ export function parseMarkdown(content: string): string {
     marked.parse(
       // eslint-disable-next-line no-misleading-character-class
       content.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, ''),
-      { async: false },
-    ),
+    ) as string,
   )
 }
