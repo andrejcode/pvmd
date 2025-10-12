@@ -28,7 +28,7 @@ export function readMarkdownFile(path: string): string {
 }
 
 export function parseMarkdown(content: string): string {
-  // Sanitize parsed markdown with speacial zero width characters replaced
+  // Sanitize parsed markdown with special zero width characters replaced
   return sanitizeHtml(
     marked.parse(
       // eslint-disable-next-line no-misleading-character-class
