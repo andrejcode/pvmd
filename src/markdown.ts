@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { marked } from 'marked'
-import sanitizeHtml from 'sanitize-html'
+import xss from 'xss'
 
 export function readMarkdownFile(path: string): string {
   try {
@@ -29,7 +29,7 @@ export function readMarkdownFile(path: string): string {
 
 export function parseMarkdown(content: string): string {
   // Sanitize parsed markdown with special zero width characters replaced
-  return sanitizeHtml(
+  return xss(
     marked.parse(
       // eslint-disable-next-line no-misleading-character-class
       content.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, ''),
