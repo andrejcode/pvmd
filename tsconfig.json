@@ -1,13 +1,12 @@
 {
-  "include": ["src"],
+  "include": ["src/**/*.ts", "*.ts"],
   "exclude": ["dist", "node_modules"],
   "compilerOptions": {
-    "outDir": "./dist",
     "module": "esnext",
     "target": "es2020",
     "moduleResolution": "bundler",
     "lib": ["esnext"],
-    "types": ["node"],
+    "types": ["node", "vitest/globals"],
     "declaration": true,
     "strict": true,
     "verbatimModuleSyntax": true,

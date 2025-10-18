@@ -15,6 +15,8 @@
     "copy:client": "mkdir -p dist/client && cp src/client/index.html dist/client/",
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
@@ -34,6 +36,7 @@
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.44.0",
+    "vitest": "^3.2.4",
     "xss": "^1.0.15"
   }
 }
