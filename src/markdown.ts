@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs'
+import { extname } from 'node:path'
 import { marked } from 'marked'
 import xss from 'xss'
+import { MD_FILE_EXTENSIONS } from './constants'
 
 marked.use({
   async: false,
@@ -10,6 +12,13 @@ marked.use({
 })
 
 export function readMarkdownFile(path: string): string {
+  const extension = extname(path).toLowerCase()
+  if (!MD_FILE_EXTENSIONS.includes(extension)) {
+    throw new Error(
+      `Invalid extension for path: ${path}.\nExpected extensions: ${MD_FILE_EXTENSIONS.join(', ')}`,
+    )
+  }
+
   try {
     return readFileSync(path, 'utf8')
   } catch (error) {
