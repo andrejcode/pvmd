@@ -1,4 +1,15 @@
-import { parseMarkdown } from '../markdown'
+import {
+  writeFileSync,
+  mkdirSync,
+  chmodSync,
+  unlinkSync,
+  rmdirSync,
+  rmSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { MD_FILE_EXTENSIONS } from '../constants'
+import { parseMarkdown, readMarkdownFile } from '../markdown'
 
 describe('parseMarkdown', () => {
   test('should correctly parse headings', () => {
@@ -282,5 +293,122 @@ const example = 'code block';
         '&lt;iframe src="evil.com"&gt;&lt;/iframe&gt;',
       )
     })
+  })
+})
+
+describe('readMarkdownFile', () => {
+  let tempDir: string
+  let testFilePath: string
+
+  beforeEach(() => {
+    tempDir = join(tmpdir(), `pvmd-test-${Date.now()}`)
+    mkdirSync(tempDir)
+    testFilePath = join(tempDir, 'test.md')
+  })
+
+  afterEach(() => {
+    try {
+      rmSync(tempDir, { recursive: true, force: true })
+    } catch {
+      // Directory might not exist, ignore
+    }
+  })
+
+  test('should throw path is directory error for directory', () => {
+    const dirPath = join(tempDir, 'directory')
+    mkdirSync(dirPath)
+
+    expect(() => readMarkdownFile(dirPath)).toThrow(
+      `Path is a directory: ${dirPath}`,
+    )
+
+    rmdirSync(dirPath)
+  })
+
+  test('should throw path is directory error for directory with .md extension', () => {
+    const dirPath = join(tempDir, 'directory.md')
+    mkdirSync(dirPath)
+
+    expect(() => readMarkdownFile(dirPath)).toThrow(
+      `Path is a directory: ${dirPath}`,
+    )
+
+    rmdirSync(dirPath)
+  })
+
+  test('should not throw error for valid markdown extensions', () => {
+    MD_FILE_EXTENSIONS.forEach((ext) => {
+      const testFile = join(tempDir, `test${ext}`)
+      writeFileSync(testFile, '# Test content')
+
+      expect(() => {
+        const content = readMarkdownFile(testFile)
+        expect(content).toBe('# Test content')
+      }).not.toThrow()
+
+      unlinkSync(testFile)
+    })
+  })
+
+  test('should throw error for .js extension', () => {
+    const testFilePath = join(tempDir, 'test.js')
+    writeFileSync(testFilePath, '')
+
+    expect(() => readMarkdownFile(testFilePath)).toThrow(
+      `Invalid extension for path: ${testFilePath}.\nExpected extensions: ${MD_FILE_EXTENSIONS.join(', ')}`,
+    )
+
+    unlinkSync(testFilePath)
+  })
+
+  test('should be able to read existing test.md file', () => {
+    const content = '# Test Markdown\n\nThis is a test file.'
+    writeFileSync(testFilePath, content)
+
+    const result = readMarkdownFile(testFilePath)
+    expect(result).toBe(content)
+  })
+
+  test('should throw file not found error for non-existent file', () => {
+    const nonExistentFile = join(tempDir, 'nonexistent.md')
+
+    expect(() => readMarkdownFile(nonExistentFile)).toThrow(
+      `File not found: ${nonExistentFile}`,
+    )
+  })
+
+  test('should throw permission denied error for file without read permission', () => {
+    writeFileSync(testFilePath, '# Test content')
+    chmodSync(testFilePath, 0o000) // Remove all permissions
+
+    expect(() => readMarkdownFile(testFilePath)).toThrow(
+      `Permission denied: ${testFilePath}`,
+    )
+
+    chmodSync(testFilePath, 0o644) // Restore permissions for cleanup
+  })
+
+  test('should handle case insensitive extensions', () => {
+    const upperCaseFile = join(tempDir, 'test.MD')
+    writeFileSync(upperCaseFile, '# Test content')
+
+    expect(() => {
+      const content = readMarkdownFile(upperCaseFile)
+      expect(content).toBe('# Test content')
+    }).not.toThrow()
+
+    unlinkSync(upperCaseFile)
+  })
+
+  test('should handle mixed case extensions', () => {
+    const mixedCaseFile = join(tempDir, 'test.Md')
+    writeFileSync(mixedCaseFile, '# Test content')
+
+    expect(() => {
+      const content = readMarkdownFile(mixedCaseFile)
+      expect(content).toBe('# Test content')
+    }).not.toThrow()
+
+    unlinkSync(mixedCaseFile)
   })
 })
