@@ -12,5 +12,12 @@ export function readHTMLTemplate(): string {
 }
 
 export function injectMarkdown(template: string, markdown: string): string {
+  if (!template.includes('<!-- MARKDOWN_OUTLET -->')) {
+    throw new Error(
+      'HTML template is missing the required marker: <!-- MARKDOWN_OUTLET -->\n' +
+        'The template may be corrupted. Try reinstalling: npm install -g pvmd',
+    )
+  }
+
   return template.replace('<!-- MARKDOWN_OUTLET -->', markdown)
 }
