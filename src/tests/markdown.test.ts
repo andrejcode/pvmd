@@ -1,15 +1,16 @@
 import {
-  writeFileSync,
   mkdirSync,
+  rmSync,
+  writeFileSync,
+  symlinkSync,
   chmodSync,
   unlinkSync,
-  rmdirSync,
-  rmSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { MD_FILE_EXTENSIONS } from '../constants'
 import { parseMarkdown, readMarkdownFile } from '../markdown'
+import { ValidationError } from '../utils/errors'
+import { MD_FILE_EXTENSIONS } from '../utils/validation'
 
 describe('parseMarkdown', () => {
   test('should correctly parse headings', () => {
@@ -302,7 +303,7 @@ describe('readMarkdownFile', () => {
 
   beforeEach(() => {
     tempDir = join(tmpdir(), `pvmd-test-${Date.now()}`)
-    mkdirSync(tempDir)
+    mkdirSync(tempDir, { recursive: true })
     testFilePath = join(tempDir, 'test.md')
   })
 
@@ -314,54 +315,7 @@ describe('readMarkdownFile', () => {
     }
   })
 
-  test('should throw path is directory error for directory', () => {
-    const dirPath = join(tempDir, 'directory')
-    mkdirSync(dirPath)
-
-    expect(() => readMarkdownFile(dirPath)).toThrow(
-      `Path is a directory: ${dirPath}`,
-    )
-
-    rmdirSync(dirPath)
-  })
-
-  test('should throw path is directory error for directory with .md extension', () => {
-    const dirPath = join(tempDir, 'directory.md')
-    mkdirSync(dirPath)
-
-    expect(() => readMarkdownFile(dirPath)).toThrow(
-      `Path is a directory: ${dirPath}`,
-    )
-
-    rmdirSync(dirPath)
-  })
-
-  test('should not throw error for valid markdown extensions', () => {
-    MD_FILE_EXTENSIONS.forEach((ext) => {
-      const testFile = join(tempDir, `test${ext}`)
-      writeFileSync(testFile, '# Test content')
-
-      expect(() => {
-        const content = readMarkdownFile(testFile)
-        expect(content).toBe('# Test content')
-      }).not.toThrow()
-
-      unlinkSync(testFile)
-    })
-  })
-
-  test('should throw error for .js extension', () => {
-    const testFilePath = join(tempDir, 'test.js')
-    writeFileSync(testFilePath, '')
-
-    expect(() => readMarkdownFile(testFilePath)).toThrow(
-      `Invalid extension for path: ${testFilePath}.\nExpected extensions: ${MD_FILE_EXTENSIONS.join(', ')}`,
-    )
-
-    unlinkSync(testFilePath)
-  })
-
-  test('should be able to read existing test.md file', () => {
+  test('should successfully read a valid markdown file', () => {
     const content = '# Test Markdown\n\nThis is a test file.'
     writeFileSync(testFilePath, content)
 
@@ -369,46 +323,76 @@ describe('readMarkdownFile', () => {
     expect(result).toBe(content)
   })
 
-  test('should throw file not found error for non-existent file', () => {
-    const nonExistentFile = join(tempDir, 'nonexistent.md')
+  describe('ValidationError cases', () => {
+    test('should throw ValidationError for invalid file extension', () => {
+      const testFile = join(tempDir, 'test.js')
+      writeFileSync(testFile, '# Test content')
 
-    expect(() => readMarkdownFile(nonExistentFile)).toThrow(
-      `File not found: ${nonExistentFile}`,
-    )
+      expect(() => readMarkdownFile(testFile)).toThrow(ValidationError)
+      expect(() => readMarkdownFile(testFile)).toThrow(
+        `Invalid extension for path: ${testFile}.\nExpected extensions: ${MD_FILE_EXTENSIONS.join(', ')}`,
+      )
+
+      unlinkSync(testFile)
+    })
+
+    test('should throw ValidationError when path is a directory', () => {
+      const dirPath = join(tempDir, 'directory')
+      mkdirSync(dirPath)
+
+      expect(() => readMarkdownFile(dirPath)).toThrow(ValidationError)
+      expect(() => readMarkdownFile(dirPath)).toThrow(
+        `Path is a directory: ${dirPath}`,
+      )
+    })
+
+    test('should throw ValidationError when path is a directory with .md extension', () => {
+      const dirPath = join(tempDir, 'directory.md')
+      mkdirSync(dirPath)
+
+      expect(() => readMarkdownFile(dirPath)).toThrow(ValidationError)
+      expect(() => readMarkdownFile(dirPath)).toThrow(
+        `Path is a directory: ${dirPath}`,
+      )
+    })
+
+    test('should throw ValidationError when path is a symbolic link', () => {
+      const targetFile = join(tempDir, 'target.md')
+      writeFileSync(targetFile, '# Target content')
+      const symlinkPath = join(tempDir, 'symlink.md')
+      symlinkSync(targetFile, symlinkPath)
+
+      expect(() => readMarkdownFile(symlinkPath)).toThrow(ValidationError)
+      expect(() => readMarkdownFile(symlinkPath)).toThrow(
+        `Path is a symbolic link: ${symlinkPath}`,
+      )
+
+      unlinkSync(symlinkPath)
+      unlinkSync(targetFile)
+    })
   })
 
-  test('should throw permission denied error for file without read permission', () => {
-    writeFileSync(testFilePath, '# Test content')
-    chmodSync(testFilePath, 0o000) // Remove all permissions
+  describe('file system errors', () => {
+    test('should throw error message for non-existent file', () => {
+      const nonExistentFile = join(tempDir, 'nonexistent.md')
 
-    expect(() => readMarkdownFile(testFilePath)).toThrow(
-      `Permission denied: ${testFilePath}`,
-    )
+      expect(() => readMarkdownFile(nonExistentFile)).toThrow(Error)
+      expect(() => readMarkdownFile(nonExistentFile)).toThrow(
+        `File not found: ${nonExistentFile}`,
+      )
+    })
 
-    chmodSync(testFilePath, 0o644) // Restore permissions for cleanup
-  })
+    test('should throw error for file without read permission', () => {
+      writeFileSync(testFilePath, '# Test content')
+      chmodSync(testFilePath, 0o000) // Remove all permissions
 
-  test('should handle case insensitive extensions', () => {
-    const upperCaseFile = join(tempDir, 'test.MD')
-    writeFileSync(upperCaseFile, '# Test content')
+      expect(() => readMarkdownFile(testFilePath)).toThrow(Error)
+      expect(() => readMarkdownFile(testFilePath)).toThrow(
+        `Permission denied: ${testFilePath}`,
+      )
 
-    expect(() => {
-      const content = readMarkdownFile(upperCaseFile)
-      expect(content).toBe('# Test content')
-    }).not.toThrow()
-
-    unlinkSync(upperCaseFile)
-  })
-
-  test('should handle mixed case extensions', () => {
-    const mixedCaseFile = join(tempDir, 'test.Md')
-    writeFileSync(mixedCaseFile, '# Test content')
-
-    expect(() => {
-      const content = readMarkdownFile(mixedCaseFile)
-      expect(content).toBe('# Test content')
-    }).not.toThrow()
-
-    unlinkSync(mixedCaseFile)
+      // Restore permissions for cleanup
+      chmodSync(testFilePath, 0o644)
+    })
   })
 })

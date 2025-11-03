@@ -1,3 +1,5 @@
+export class ValidationError extends Error {}
+
 /**
  * Helper function to process file system errors and return user-friendly error messages
  */
@@ -19,6 +21,9 @@ export function processFileSystemError(
         break
       case 'EISDIR':
         errorMessage = `Path is a directory: ${path}`
+        break
+      case 'ERR_INVALID_ARG_VALUE':
+        errorMessage = `Path contains null bytes: ${path}`
         break
     }
   }

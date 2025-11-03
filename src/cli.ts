@@ -1,7 +1,5 @@
-import { join } from 'node:path'
-
 export interface CliOptions {
-  filePath: string
+  userPath: string
 }
 
 export function parseArguments(args: string[]): CliOptions {
@@ -12,6 +10,6 @@ export function parseArguments(args: string[]): CliOptions {
   }
 
   return {
-    filePath: join(process.cwd(), args[0]),
+    userPath: args[0],
   }
 }

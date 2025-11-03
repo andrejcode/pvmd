@@ -1,9 +1,8 @@
-import { readFileSync, statSync } from 'node:fs'
-import { extname } from 'node:path'
+import { readFileSync } from 'node:fs'
 import { marked } from 'marked'
 import xss from 'xss'
-import { MD_FILE_EXTENSIONS } from './constants'
-import { processFileSystemError } from './utils/filesystem'
+import { ValidationError, processFileSystemError } from './utils/errors'
+import { validateFile, validateMarkdownExtension } from './utils/validation'
 
 marked.use({
   async: false,
@@ -24,26 +23,17 @@ export function parseMarkdown(content: string): string {
 
 export function readMarkdownFile(path: string): string {
   try {
-    const stats = statSync(path)
-    if (stats.isDirectory()) {
-      // Create a synthetic error with EISDIR code for consistent handling
-      throw Object.assign(new Error(), {
-        code: 'EISDIR',
-      }) as NodeJS.ErrnoException
-    }
-  } catch (error) {
-    throw new Error(processFileSystemError(error, path, 'read markdown file'))
-  }
+    validateFile(path)
+    validateMarkdownExtension(path)
 
-  if (!MD_FILE_EXTENSIONS.includes(extname(path).toLowerCase())) {
-    throw new Error(
-      `Invalid extension for path: ${path}.\nExpected extensions: ${MD_FILE_EXTENSIONS.join(', ')}`,
-    )
-  }
-
-  try {
     return readFileSync(path, 'utf8')
   } catch (error) {
+    // ValidationError is thrown when the file is not a markdown file
+    // It has custom error messages, so we can throw it directly
+    if (error instanceof ValidationError) {
+      throw error
+    }
+
     throw new Error(processFileSystemError(error, path, 'read markdown file'))
   }
 }

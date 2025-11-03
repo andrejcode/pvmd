@@ -4,13 +4,15 @@ import { parseArguments } from './cli'
 import { parseMarkdown, readMarkdownFile } from './markdown'
 import { createServer, startServer } from './server'
 import { readHTMLTemplate, injectMarkdown } from './template'
-import { exitWithError } from './utils/process'
+import { resolvePath } from './utils/validation'
 
 try {
   const args = process.argv.slice(2)
-  const { filePath } = parseArguments(args)
+  const { userPath } = parseArguments(args)
 
-  const markdownContent = readMarkdownFile(filePath)
+  const fullPath = resolvePath(userPath)
+
+  const markdownContent = readMarkdownFile(fullPath)
   const parsedMarkdown = parseMarkdown(markdownContent)
 
   const htmlTemplate = readHTMLTemplate()
@@ -20,5 +22,6 @@ try {
   startServer(server)
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error)
-  exitWithError(message)
+  console.error(message)
+  process.exit(1)
 }
