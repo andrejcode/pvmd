@@ -34,6 +34,6 @@ export function readMarkdownFile(path: string): string {
       throw error
     }
 
-    throw new Error(processFileSystemError(error, path, 'read markdown file'))
+    throw new Error(processFileSystemError(error, path))
   }
 }

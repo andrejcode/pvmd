@@ -5,6 +5,7 @@ import { parseMarkdown, readMarkdownFile } from './markdown'
 import { createServer, startServer } from './server'
 import { readHTMLTemplate, injectMarkdown } from './template'
 import { resolvePath } from './utils/validation'
+import createWatcher from './watcher'
 
 try {
   const args = process.argv.slice(2)
@@ -20,6 +21,8 @@ try {
 
   const server = createServer(preparedHTML)
   startServer(server)
+
+  createWatcher(server, fullPath)
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error)
   console.error(message)

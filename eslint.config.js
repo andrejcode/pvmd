@@ -7,22 +7,20 @@ import importPlugin from 'eslint-plugin-import'
 export default defineConfig(
   globalIgnores(['dist/', 'eslint.config.js']),
   eslint.configs.recommended,
-  tseslint.configs.recommendedTypeChecked,
   importPlugin.flatConfigs.recommended,
-  importPlugin.flatConfigs.typescript,
   {
+    files: ['**/*.js'],
     languageOptions: {
-      parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
+      ecmaVersion: 'latest',
+      sourceType: 'module',
     },
-    settings: {
-      'import/resolver': {
-        typescript: true,
-        node: true,
-      },
-    },
+  },
+  {
+    files: ['**/*.ts'],
+    extends: [
+      tseslint.configs.recommendedTypeChecked,
+      importPlugin.flatConfigs.typescript,
+    ],
     rules: {
       'import/order': [
         'error',
@@ -43,6 +41,40 @@ export default defineConfig(
         },
       ],
       'import/newline-after-import': 'error',
+    },
+  },
+  {
+    files: ['**/*.ts'],
+    ignores: ['src/client/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    settings: {
+      'import/resolver': {
+        typescript: {
+          project: './tsconfig.json',
+        },
+        node: true,
+      },
+    },
+  },
+  {
+    files: ['src/client/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.client.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    settings: {
+      'import/resolver': {
+        typescript: {
+          project: './tsconfig.client.json',
+        },
+      },
     },
   },
   prettierConfig,

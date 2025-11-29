@@ -5,12 +5,8 @@ describe('processFileSystemError', () => {
     const error = new Error('Unknown error') as NodeJS.ErrnoException
     error.code = 'EUNKNOWN'
 
-    const result = processFileSystemError(
-      error,
-      '/path/to/file',
-      'read markdown file',
-    )
+    const result = processFileSystemError(error, '/path/to/file')
 
-    expect(result).toBe('Unable to read markdown file: /path/to/file')
+    expect(result).toBe('Unable to read file: /path/to/file')
   })
 })

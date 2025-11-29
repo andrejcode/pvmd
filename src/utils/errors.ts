@@ -3,12 +3,8 @@ export class ValidationError extends Error {}
 /**
  * Helper function to process file system errors and return user-friendly error messages
  */
-export function processFileSystemError(
-  error: unknown,
-  path: string,
-  operation: string,
-): string {
-  let errorMessage = `Unable to ${operation}: ${path}`
+export function processFileSystemError(error: unknown, path: string): string {
+  let errorMessage = `Unable to read file: ${path}`
 
   if (error instanceof Error && 'code' in error) {
     const nodeError = error as NodeJS.ErrnoException
