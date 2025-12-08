@@ -8,11 +8,23 @@ const result = await build({
   format: 'iife',
   write: false,
   minify: true,
+  outdir: 'dist/client',
+  loader: {
+    '.css': 'css',
+  },
 })
 
-const js = result.outputFiles[0].text
+// Assumes single entry point produces exactly one .js and one .css file
+const js =
+  result.outputFiles.find((file) => file.path.endsWith('.js'))?.text || ''
+const css =
+  result.outputFiles.find((file) => file.path.endsWith('.css'))?.text || ''
+
 const html = await readFile('src/client/index.html', 'utf-8')
-const output = html.replace('<!-- SCRIPT_OUTLET -->', `<script>${js}</script>`)
+
+let output = html
+output = output.replace('<!-- STYLE_OUTLET -->', `<style>${css}</style>`)
+output = output.replace('<!-- SCRIPT_OUTLET -->', `<script>${js}</script>`)
 
 await mkdir('dist/client', { recursive: true })
 await writeFile('dist/client/index.html', output)

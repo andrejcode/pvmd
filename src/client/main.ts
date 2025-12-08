@@ -1,8 +1,11 @@
+import 'github-markdown-css/github-markdown.css'
+import './styles.css'
+
 const ws = new WebSocket(`ws://${window.location.host}`)
-const main = document.getElementById('markdown')
+const mainElement = document.getElementById('markdown-content')
 
 ws.onmessage = (event) => {
-  if (main && typeof event.data === 'string') {
-    main.innerHTML = event.data
+  if (mainElement && typeof event.data === 'string') {
+    mainElement.innerHTML = event.data
   }
 }
