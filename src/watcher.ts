@@ -32,7 +32,10 @@ export default function createWatcher(server: Server, path: string) {
 
   const watcher = watch(path, (event) => {
     if (event === 'rename') {
-      return
+      console.error(`File ${path} was renamed or deleted. Exiting.`)
+      watcher.close()
+      wss.close()
+      process.exit(1)
     }
 
     if (!client || client.readyState !== WebSocket.OPEN) {

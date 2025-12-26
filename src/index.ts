@@ -22,7 +22,21 @@ try {
   const server = createServer(preparedHTML)
   startServer(server)
 
-  createWatcher(server, fullPath)
+  const cleanup = createWatcher(server, fullPath)
+
+  const shutdown = () => {
+    cleanup()
+    server.close(() => {
+      process.exit(0)
+    })
+
+    setTimeout(() => {
+      process.exit(0)
+    }, 5000)
+  }
+
+  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', shutdown)
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error)
   console.error(message)
