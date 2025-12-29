@@ -8,4 +8,7 @@ await build({
   outfile: 'dist/index.js',
   external: ['node:*', 'ws'],
   minify: true,
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
 })

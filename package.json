@@ -10,8 +10,10 @@
     "pvmd": "dist/index.js"
   },
   "scripts": {
-    "dev": "tsx src/index.ts",
-    "clean": "rm -rf dist",
+    "dev": "node dev.js",
+    "dev:app": "NODE_ENV=development tsx src/index.ts",
+    "dev:client": "node esbuild.client.dev.js",
+    "clean": "rm -rf dist .dev-build",
     "build": "npm run clean && npm run build:app && npm run build:client",
     "build:app": "npm run typecheck:app && node esbuild.config.js",
     "build:client": "npm run typecheck:client && node esbuild.client.js",
@@ -42,6 +44,7 @@
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
     "github-markdown-css": "^5.8.1",
+    "globals": "^16.5.0",
     "jsdom": "^27.2.0",
     "marked": "^16.4.0",
     "prettier": "^3.6.2",
