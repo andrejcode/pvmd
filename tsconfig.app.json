@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts", "*.ts"],
+  "exclude": ["src/client"],
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "types": ["node", "vitest/globals"]
+  }
+}

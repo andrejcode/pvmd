@@ -21,3 +21,51 @@ body {
     padding: 0 15px;
   }
 }
+
+#disconnected-alert {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  background-color: #fff9c4;
+  color: #333;
+  border: 2px solid #f9a825;
+  padding: 12px 16px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  z-index: 1000;
+  transition: opacity 0.3s ease;
+}
+
+#disconnected-alert[hidden] {
+  display: none;
+}
+
+#alert-message {
+  margin: 0;
+}
+
+#alert-close {
+  background: none;
+  border: none;
+  color: #333;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+#alert-close:hover {
+  opacity: 1;
+}
+
+#alert-close:focus {
+  outline: 2px solid #f9a825;
+  outline-offset: 2px;
+}

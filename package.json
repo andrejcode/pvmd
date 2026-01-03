@@ -18,7 +18,7 @@
     "build:app": "npm run typecheck:app && node esbuild.config.js",
     "build:client": "npm run typecheck:client && node esbuild.client.js",
     "typecheck": "npm run typecheck:app && npm run typecheck:client",
-    "typecheck:app": "tsc --noEmit",
+    "typecheck:app": "tsc --noEmit --project tsconfig.app.json",
     "typecheck:client": "tsc --noEmit --project tsconfig.client.json",
     "start": "node dist/index.js",
     "test": "vitest run",
