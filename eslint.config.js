@@ -50,7 +50,7 @@ export default defineConfig(
     ignores: ['src/client/**/*.ts'],
     languageOptions: {
       parserOptions: {
-        project: './tsconfig.json',
+        project: './tsconfig.app.json',
         tsconfigRootDir: import.meta.dirname,
       },
       globals: globals.node,
@@ -58,7 +58,7 @@ export default defineConfig(
     settings: {
       'import/resolver': {
         typescript: {
-          project: './tsconfig.json',
+          project: './tsconfig.app.json',
         },
         node: true,
       },
