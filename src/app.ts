@@ -2,7 +2,7 @@ import type { Server } from 'node:http'
 import { parseMarkdown, readMarkdownFile } from './markdown'
 import { createServer, startServer } from './server'
 import { prepareHTML } from './template'
-import { resolvePath } from './utils/validation'
+import { resolvePath } from './utils/path-validation'
 import createWatcher from './watcher'
 
 function setupShutdownHandlers(server: Server, cleanup: () => void) {

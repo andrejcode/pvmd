@@ -1,4 +1,4 @@
-import { processFileSystemError } from '../errors'
+import { processFileSystemError } from '../file-error'
 
 describe('processFileSystemError', () => {
   test('should return generic message for unknown error codes', () => {

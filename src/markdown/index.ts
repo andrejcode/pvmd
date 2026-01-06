@@ -1,8 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { marked } from 'marked'
 import xss from 'xss'
-import { ValidationError, processFileSystemError } from './utils/errors'
-import { validateFile, validateMarkdownExtension } from './utils/validation'
+import {
+  ValidationError,
+  validateFile,
+  validateMarkdownExtension,
+} from './file-validation'
+import { processFileSystemError } from '../utils/file-error'
 
 marked.use({
   async: false,

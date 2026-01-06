@@ -8,9 +8,8 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseMarkdown, readMarkdownFile } from '../markdown'
-import { ValidationError } from '../utils/errors'
-import { MD_FILE_EXTENSIONS } from '../utils/validation'
+import { ValidationError } from '../file-validation'
+import { parseMarkdown, readMarkdownFile } from '../index'
 
 describe('parseMarkdown', () => {
   test('should correctly parse headings', () => {
@@ -328,9 +327,20 @@ describe('readMarkdownFile', () => {
       const testFile = join(tempDir, 'test.js')
       writeFileSync(testFile, '# Test content')
 
+      const validExtensions = [
+        '.md',
+        '.markdown',
+        '.mdown',
+        '.mkdn',
+        '.mkd',
+        '.mdwn',
+        '.mdtxt',
+        '.mdtext',
+      ]
+
       expect(() => readMarkdownFile(testFile)).toThrow(ValidationError)
       expect(() => readMarkdownFile(testFile)).toThrow(
-        `Invalid extension for path: ${testFile}.\nExpected extensions: ${MD_FILE_EXTENSIONS.join(', ')}`,
+        `Invalid extension for path: ${testFile}.\nExpected extensions: ${validExtensions.join(', ')}`,
       )
 
       unlinkSync(testFile)

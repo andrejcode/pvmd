@@ -1,22 +1,27 @@
 import fs from 'node:fs'
-import { resolve } from 'node:path'
-import {
-  validateMarkdownExtension,
-  MD_FILE_EXTENSIONS,
-  validateFile,
-  resolvePath,
-} from '../validation'
+import { validateMarkdownExtension, validateFile } from '../file-validation'
 
 vi.mock('node:fs')
 
 describe('validateMarkdownExtension', () => {
+  const validExtensions = [
+    '.md',
+    '.markdown',
+    '.mdown',
+    '.mkdn',
+    '.mkd',
+    '.mdwn',
+    '.mdtxt',
+    '.mdtext',
+  ]
+
   test('should throw error if extension is not a markdown file', () => {
     expect(() => validateMarkdownExtension('test.js')).toThrow(
-      `Invalid extension for path: test.js.\nExpected extensions: ${MD_FILE_EXTENSIONS.join(', ')}`,
+      `Invalid extension for path: test.js.\nExpected extensions: ${validExtensions.join(', ')}`,
     )
   })
 
-  test.each(MD_FILE_EXTENSIONS)(
+  test.each(validExtensions)(
     'should not throw error if extension is a markdown file',
     (extension) => {
       expect(() => validateMarkdownExtension(`test${extension}`)).not.toThrow()
@@ -84,23 +89,5 @@ describe('validateFile', () => {
     })
 
     expect(() => validateFile('nonexistent.md')).toThrow('ENOENT')
-  })
-})
-
-describe('resolvePath', () => {
-  const baseDir = '/some/test/dir'
-
-  test('should resolve path relative to the base directory', () => {
-    expect(resolvePath('test.md', baseDir)).toBe(resolve(baseDir, 'test.md'))
-  })
-
-  test('should throw error if path traversal is attempted', () => {
-    expect(() => resolvePath('../../test.md', baseDir)).toThrow(
-      `Path traversal are not allowed: ${resolve(baseDir, '../../test.md')}`,
-    )
-  })
-
-  test('should use process.cwd() as default base directory', () => {
-    expect(resolvePath('test.md')).toBe(resolve(process.cwd(), 'test.md'))
   })
 })

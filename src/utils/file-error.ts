@@ -1,5 +1,3 @@
-export class ValidationError extends Error {}
-
 /**
  * Helper function to process file system errors and return user-friendly error messages
  */

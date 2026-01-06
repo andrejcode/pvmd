@@ -2,7 +2,7 @@ import { watch, readFileSync } from 'node:fs'
 import type { Server } from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { parseMarkdown } from './markdown'
-import { processFileSystemError } from './utils/errors'
+import { processFileSystemError } from './utils/file-error'
 
 export default function createWatcher(server: Server, path: string) {
   const wss = new WebSocketServer({ server })
