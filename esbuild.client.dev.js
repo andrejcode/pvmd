@@ -44,7 +44,7 @@ const ctx = await context({
   format: 'iife',
   write: false,
   minify: false,
-  sourcemap: true,
+  sourcemap: 'inline',
   outdir: '.dev-build/client',
   loader: {
     '.css': 'css',
