@@ -4,9 +4,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from 'node:http'
-
-const DEFAULT_HOSTNAME = '127.0.0.1'
-const DEFAULT_PORT = 8765
+import { config } from './cli/config'
 
 export function createServer(html: string): Server {
   return createHttpServer((req: IncomingMessage, res: ServerResponse) => {
@@ -25,12 +23,8 @@ export function createServer(html: string): Server {
   })
 }
 
-export function startServer(
-  server: Server,
-  port: number = DEFAULT_PORT,
-  hostname: string = DEFAULT_HOSTNAME,
-) {
-  server.listen(port, hostname, () => {
-    console.log(`Server running at http://${hostname}:${port}/`)
+export function startServer(server: Server) {
+  server.listen(config.port, '127.0.0.1', () => {
+    console.log(`Server running at http://127.0.0.1:${config.port}/`)
   })
 }

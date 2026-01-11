@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import { config } from '../config'
 import { parseArguments } from '../index'
 
 describe('parseArguments', () => {
@@ -6,9 +7,13 @@ describe('parseArguments', () => {
     const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     const processExitSpy = vi
       .spyOn(process, 'exit')
-      .mockImplementation(() => undefined as never)
+      .mockImplementation((code) => {
+        throw new Error(`Process exited with code ${code}`)
+      })
 
-    parseArguments(['--help'])
+    expect(() => parseArguments(['--help'])).toThrow(
+      'Process exited with code 0',
+    )
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining('Usage: pvmd [options] <file>'),
     )
@@ -17,7 +22,7 @@ describe('parseArguments', () => {
     consoleLogSpy.mockClear()
     processExitSpy.mockClear()
 
-    parseArguments(['-h'])
+    expect(() => parseArguments(['-h'])).toThrow('Process exited with code 0')
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining('Usage: pvmd [options] <file>'),
     )
@@ -31,17 +36,24 @@ describe('parseArguments', () => {
     const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     const processExitSpy = vi
       .spyOn(process, 'exit')
-      .mockImplementation(() => undefined as never)
+      .mockImplementation((code) => {
+        throw new Error(`Process exited with code ${code}`)
+      })
+    const version = '0.0.0'
+    vi.stubEnv('PVMD_VERSION', version)
 
-    parseArguments(['--version'])
-    expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
+    expect(() => parseArguments(['--version'])).toThrow(
+      'Process exited with code 0',
+    )
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(`pvmd v${version}`)
     expect(processExitSpy).toHaveBeenCalledWith(0)
 
     consoleLogSpy.mockClear()
     processExitSpy.mockClear()
 
-    parseArguments(['-v'])
-    expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
+    expect(() => parseArguments(['-v'])).toThrow('Process exited with code 0')
+    expect(consoleLogSpy).toHaveBeenCalledWith(`pvmd v${version}`)
     expect(processExitSpy).toHaveBeenCalledWith(0)
 
     consoleLogSpy.mockRestore()
@@ -50,19 +62,39 @@ describe('parseArguments', () => {
 
   test('should throw error if no arguments are provided', () => {
     expect(() => parseArguments([])).toThrow(
-      'Please provide a markdown file path as argument.\nUsage: pvmd <file.md>',
+      'Please provide a markdown file path as an argument',
     )
   })
 
   test('should throw error if the first argument is empty string', () => {
     expect(() => parseArguments([''])).toThrow(
-      'Please provide a markdown file path as argument.\nUsage: pvmd <file.md>',
+      'Please provide a markdown file path as an argument',
     )
   })
 
   test('should return the correct arguments', () => {
-    expect(parseArguments(['test.md'])).toEqual({
-      userPath: 'test.md',
-    })
+    expect(parseArguments(['test.md'])).toBe('test.md')
+  })
+
+  test('should update the config if an option is provided', () => {
+    parseArguments(['test.md', '--port', '8080'])
+    expect(config.port).toBe(8080)
+  })
+
+  test('should throw error if port number is not valid', () => {
+    expect(() => parseArguments(['test.md', '--port', '0'])).toThrow(
+      'Port must be between 1024 and 49151',
+    )
+  })
+
+  test('should throw error if port number is not provided', () => {
+    expect(() => parseArguments(['test.md', '--port'])).toThrow(
+      'Port option requires a value',
+    )
+  })
+
+  test('should update config.port to the latest provided value', () => {
+    parseArguments(['test.md', '--port', '8080', '-p', '8081'])
+    expect(config.port).toBe(8081)
   })
 })

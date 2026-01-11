@@ -21,15 +21,17 @@ const client = spawn('node', ['esbuild.client.dev.js'], {
 
 client.stdout.on('data', (data) => {
   const lines = data.toString().split('\n')
-  lines.forEach((line) => {
-    if (line.trim()) console.log(prefix('client', 'cyan') + line)
+  lines.forEach((line, i) => {
+    if (i === lines.length - 1 && line === '') return
+    console.log(prefix('client', 'cyan') + line)
   })
 })
 
 client.stderr.on('data', (data) => {
   const lines = data.toString().split('\n')
-  lines.forEach((line) => {
-    if (line.trim()) console.error(prefix('client', 'cyan') + line)
+  lines.forEach((line, i) => {
+    if (i === lines.length - 1 && line === '') return
+    console.error(prefix('client', 'cyan') + line)
   })
 })
 
@@ -40,15 +42,17 @@ const app = spawn('tsx', ['src/index.ts', ...args], {
 
 app.stdout.on('data', (data) => {
   const lines = data.toString().split('\n')
-  lines.forEach((line) => {
-    if (line.trim()) console.log(prefix('app', 'green') + line)
+  lines.forEach((line, i) => {
+    if (i === lines.length - 1 && line === '') return
+    console.log(prefix('app', 'green') + line)
   })
 })
 
 app.stderr.on('data', (data) => {
   const lines = data.toString().split('\n')
-  lines.forEach((line) => {
-    if (line.trim()) console.error(prefix('app', 'green') + line)
+  lines.forEach((line, i) => {
+    if (i === lines.length - 1 && line === '') return
+    console.error(prefix('app', 'green') + line)
   })
 })
 
