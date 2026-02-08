@@ -1,16 +1,24 @@
-import { vi } from 'vitest'
+import { type MockInstance } from 'vitest'
 import { config } from '../config'
 import { parseArguments } from '../index'
 
 describe('parseArguments', () => {
-  test('should print help if --help or -h is provided', () => {
-    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    const processExitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation((code) => {
-        throw new Error(`Process exited with code ${code}`)
-      })
+  let consoleLogSpy: MockInstance
+  let processExitSpy: MockInstance
 
+  beforeEach(() => {
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    processExitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Error(`Process exited with code ${code}`)
+    })
+  })
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore()
+    processExitSpy.mockRestore()
+  })
+
+  test('should print help if --help or -h is provided', () => {
     expect(() => parseArguments(['--help'])).toThrow(
       'Process exited with code 0',
     )
@@ -27,18 +35,9 @@ describe('parseArguments', () => {
       expect.stringContaining('Usage: pvmd [options] <file>'),
     )
     expect(processExitSpy).toHaveBeenCalledWith(0)
-
-    consoleLogSpy.mockRestore()
-    processExitSpy.mockRestore()
   })
 
   test('should print version if --version or -v is provided', () => {
-    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    const processExitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation((code) => {
-        throw new Error(`Process exited with code ${code}`)
-      })
     const version = '0.0.0'
     vi.stubEnv('PVMD_VERSION', version)
 
@@ -55,9 +54,6 @@ describe('parseArguments', () => {
     expect(() => parseArguments(['-v'])).toThrow('Process exited with code 0')
     expect(consoleLogSpy).toHaveBeenCalledWith(`pvmd v${version}`)
     expect(processExitSpy).toHaveBeenCalledWith(0)
-
-    consoleLogSpy.mockRestore()
-    processExitSpy.mockRestore()
   })
 
   test('should throw error if no arguments are provided', () => {

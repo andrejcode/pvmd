@@ -119,13 +119,12 @@ describe('injectTitle', () => {
 describe('prepareHTML', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  test('should prepare HTML with title and markdown', () => {
     vi.mocked(fs.readFileSync).mockImplementation(() => {
       return '<html><head><!-- TITLE_OUTLET --></head><body><!-- MARKDOWN_OUTLET --></body></html>'
     })
+  })
 
+  test('should prepare HTML with title and markdown', () => {
     const pathToMarkdownFile = '/path/to/document.md'
     const parsedMarkdown = '<h1>Hello World</h1>'
 
@@ -138,7 +137,7 @@ describe('prepareHTML', () => {
   })
 
   test('should still inject markdown if title injection fails', () => {
-    // Template without TITLE_OUTLET marker
+    // Override with template without TITLE_OUTLET marker
     vi.mocked(fs.readFileSync).mockImplementation(() => {
       return '<html><head></head><body><!-- MARKDOWN_OUTLET --></body></html>'
     })
@@ -160,10 +159,6 @@ describe('prepareHTML', () => {
   })
 
   test('should extract filename from path correctly', () => {
-    vi.mocked(fs.readFileSync).mockImplementation(() => {
-      return '<html><head><!-- TITLE_OUTLET --></head><body><!-- MARKDOWN_OUTLET --></body></html>'
-    })
-
     const pathToMarkdownFile = '/deep/nested/path/my-awesome-doc.md'
     const parsedMarkdown = '<p>Content</p>'
 
@@ -173,10 +168,6 @@ describe('prepareHTML', () => {
   })
 
   test('should work with relative paths', () => {
-    vi.mocked(fs.readFileSync).mockImplementation(() => {
-      return '<html><head><!-- TITLE_OUTLET --></head><body><!-- MARKDOWN_OUTLET --></body></html>'
-    })
-
     const pathToMarkdownFile = 'README.md'
     const parsedMarkdown = '<p>Readme content</p>'
 
