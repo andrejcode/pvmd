@@ -1,5 +1,6 @@
 import { lstatSync } from 'node:fs'
 import { extname } from 'node:path'
+import { config } from '../cli/config'
 
 export class ValidationError extends Error {}
 
@@ -36,5 +37,15 @@ export function validateFile(path: string): void {
 
   if (!stats.isFile()) {
     throw new ValidationError(`Path is not a file: ${path}`)
+  }
+
+  if (!config.skipSizeCheck) {
+    const maxFileSizeBytes = config.maxFileSizeMB * 1024 * 1024
+
+    if (stats.size > maxFileSizeBytes) {
+      throw new ValidationError(
+        `File is too large: ${path}. Maximum size is ${config.maxFileSizeMB} MB`,
+      )
+    }
   }
 }

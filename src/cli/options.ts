@@ -27,6 +27,29 @@ const options: Record<string, Option> = {
       config.port = parsed
     },
   },
+  'no-size-check': {
+    description: 'Skip file size validation',
+    action: () => {
+      config.skipSizeCheck = true
+    },
+  },
+  'max-size': {
+    description: `Maximum file size in MB (default: ${config.maxFileSizeMB})`,
+    value: '<mb>',
+    takesValue: true,
+    action: (value?: string) => {
+      if (!value) {
+        throw new Error('Max size option requires a value')
+      }
+
+      const parsed = Number(value)
+      if (isNaN(parsed) || parsed < 0) {
+        throw new Error('Max size must be a positive number')
+      }
+
+      config.maxFileSizeMB = parsed
+    },
+  },
 } as const
 
 export function createOptionMaps() {
@@ -46,8 +69,6 @@ export function createOptionMaps() {
 
 export function showHelp() {
   // TODO: Add options
-  // --max-size <mb>         Maximum file size in MB (default: 2)
-  // --no-size-check         Skip file size validation
   // -y, --yes               Skip confirmation prompt
   // --no-watch              Skip file watching
 
