@@ -72,25 +72,61 @@ describe('parseArguments', () => {
     expect(parseArguments(['test.md'])).toBe('test.md')
   })
 
-  test('should update the config if an option is provided', () => {
-    parseArguments(['test.md', '--port', '8080'])
-    expect(config.port).toBe(8080)
+  describe('port option', () => {
+    test('should update the config if an option is provided', () => {
+      parseArguments(['test.md', '--port', '8080'])
+      expect(config.port).toBe(8080)
+    })
+
+    test('should throw error if port number is not valid', () => {
+      expect(() => parseArguments(['test.md', '--port', '0'])).toThrow(
+        'Port must be between 1024 and 49151',
+      )
+    })
+
+    test('should throw error if port number is not provided', () => {
+      expect(() => parseArguments(['test.md', '--port'])).toThrow(
+        'Port option requires a value',
+      )
+    })
+
+    test('should update config.port to the latest provided value', () => {
+      parseArguments(['test.md', '--port', '8080', '-p', '8081'])
+      expect(config.port).toBe(8081)
+    })
   })
 
-  test('should throw error if port number is not valid', () => {
-    expect(() => parseArguments(['test.md', '--port', '0'])).toThrow(
-      'Port must be between 1024 and 49151',
-    )
-  })
+  describe('size options', () => {
+    test('should update the config if an option is provided', () => {
+      parseArguments(['test.md', '--no-size-check'])
+      expect(config.skipSizeCheck).toBe(true)
+    })
 
-  test('should throw error if port number is not provided', () => {
-    expect(() => parseArguments(['test.md', '--port'])).toThrow(
-      'Port option requires a value',
-    )
-  })
+    test('should throw error if max size is not positive number', () => {
+      expect(() => parseArguments(['test.md', '--max-size', '0'])).toThrow(
+        'Max size must be a positive number',
+      )
 
-  test('should update config.port to the latest provided value', () => {
-    parseArguments(['test.md', '--port', '8080', '-p', '8081'])
-    expect(config.port).toBe(8081)
+      expect(() => parseArguments(['test.md', '--max-size', '-1'])).toThrow(
+        'Max size must be a positive number',
+      )
+    })
+
+    test('should throw error if max size is not valid', () => {
+      expect(() => parseArguments(['test.md', '--max-size', 'a'])).toThrow(
+        'Max size must be a positive number',
+      )
+    })
+
+    test('should throw error if max size number is not provided', () => {
+      expect(() => parseArguments(['test.md', '--max-size'])).toThrow(
+        'Max size option requires a value',
+      )
+    })
+
+    test('should update the config if an option is provided', () => {
+      parseArguments(['test.md', '--max-size', '10'])
+      expect(config.maxFileSizeMB).toBe(10)
+    })
   })
 })

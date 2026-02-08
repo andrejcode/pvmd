@@ -43,7 +43,7 @@ const options: Record<string, Option> = {
       }
 
       const parsed = Number(value)
-      if (isNaN(parsed) || parsed < 0) {
+      if (isNaN(parsed) || parsed <= 0) {
         throw new Error('Max size must be a positive number')
       }
 
