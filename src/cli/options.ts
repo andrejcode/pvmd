@@ -78,7 +78,8 @@ export function showHelp() {
   > = {}
 
   for (const [key, value] of Object.entries(options)) {
-    const flagString = `-${value.alias}, --${key}${value.value ? ` ${value.value}` : ''}`
+    const longFlag = `--${key}${value.value ? ` ${value.value}` : ''}`
+    const flagString = value.alias ? `-${value.alias}, ${longFlag}` : longFlag
     flagsToShow[key] = {
       flagString,
       description: value.description,
