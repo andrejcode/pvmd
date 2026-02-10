@@ -52,7 +52,7 @@ const options: Record<string, Option> = {
   },
 } as const
 
-export function createOptionMaps() {
+function createOptionMaps() {
   const longToOption = new Map<string, Option>()
   const shortToOption = new Map<string, Option>()
 
@@ -65,6 +65,26 @@ export function createOptionMaps() {
   }
 
   return { longToOption, shortToOption }
+}
+
+export function resolveOption(arg: string) {
+  const { longToOption, shortToOption } = createOptionMaps()
+
+  if (arg.startsWith('--')) {
+    const name = arg.slice(2)
+    const option = longToOption.get(name)
+    if (!option) throw new Error('Unknown option: --' + name)
+    return option
+  }
+
+  if (arg.startsWith('-')) {
+    const name = arg.slice(1)
+    const option = shortToOption.get(name)
+    if (!option) throw new Error('Unknown option: -' + name)
+    return option
+  }
+
+  return null
 }
 
 export function showHelp() {
