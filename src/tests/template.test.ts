@@ -22,7 +22,7 @@ describe('readHTMLTemplate', () => {
     expect(template).toContain('<!-- MARKDOWN_OUTLET -->')
   })
 
-  test('should throw error if template file is missing', () => {
+  test('should throw an error if template file is missing', () => {
     vi.mocked(fs.readFileSync).mockImplementation(() => {
       throw new Error('ENOENT: no such file or directory')
     })
@@ -46,7 +46,7 @@ describe('injectMarkdown', () => {
     expect(result).not.toContain('<!-- MARKDOWN_OUTLET -->')
   })
 
-  test('should throw error if MARKDOWN_OUTLET marker is missing', () => {
+  test('should throw an error if MARKDOWN_OUTLET marker is missing', () => {
     const template = '<html><body></body></html>'
     const markdown = '<h1>Hello World</h1>'
 
@@ -82,7 +82,7 @@ describe('injectTitle', () => {
     expect(result).not.toContain('<!-- TITLE_OUTLET -->')
   })
 
-  test('should throw error if TITLE_OUTLET marker is missing', () => {
+  test('should throw an error if TITLE_OUTLET marker is missing', () => {
     const template = '<html><head></head><body></body></html>'
     const title = 'README.md'
 

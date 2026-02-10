@@ -16,14 +16,14 @@ describe('validateMarkdownExtension', () => {
     '.mdtext',
   ]
 
-  test('should throw error if extension is not a markdown file', () => {
+  test('should throw an error if extension is not a markdown file', () => {
     expect(() => validateMarkdownExtension('test.js')).toThrow(
       `Invalid extension for path: test.js.\nExpected extensions: ${validExtensions.join(', ')}`,
     )
   })
 
   test.each(validExtensions)(
-    'should not throw error if extension is a markdown file',
+    'should not throw an error if extension is a markdown file',
     (extension) => {
       expect(() => validateMarkdownExtension(`test${extension}`)).not.toThrow()
     },
@@ -64,31 +64,31 @@ describe('validateFile', () => {
     config.maxFileSizeMB = 2
   })
 
-  test('should throw error if path is a directory', () => {
+  test('should throw an error if path is a directory', () => {
     mockStats({ isDirectory: true, isFile: false, isSymbolicLink: false })
     expect(() => validateFile('test.md')).toThrow(
       'Path is a directory: test.md',
     )
   })
 
-  test('should throw error if path is a symbolic link', () => {
+  test('should throw an error if path is a symbolic link', () => {
     mockStats({ isDirectory: false, isFile: false, isSymbolicLink: true })
     expect(() => validateFile('test.md')).toThrow(
       `Path is a symbolic link: test.md`,
     )
   })
 
-  test('should not throw error if path is a file', () => {
+  test('should not throw an error if path is a file', () => {
     mockStats({ isDirectory: false, isFile: true, isSymbolicLink: false })
     expect(() => validateFile('test.md')).not.toThrow()
   })
 
-  test('should throw error if path is not a file', () => {
+  test('should throw an error if path is not a file', () => {
     mockStats({ isDirectory: false, isFile: false, isSymbolicLink: false })
     expect(() => validateFile('test.md')).toThrow(`Path is not a file: test.md`)
   })
 
-  test('should throw error when file does not exist', () => {
+  test('should throw an error when file does not exist', () => {
     const error = new Error(
       'ENOENT: no such file or directory',
     ) as NodeJS.ErrnoException
@@ -98,10 +98,12 @@ describe('validateFile', () => {
       throw error
     })
 
-    expect(() => validateFile('nonexistent.md')).toThrow('ENOENT')
+    expect(() => validateFile('nonexistent.md')).toThrow(
+      'File not found: nonexistent.md',
+    )
   })
 
-  test('should not throw error when file size is within limit', () => {
+  test('should not throw an error when file size is within limit', () => {
     const oneMB = 1024 * 1024
     mockStats({
       isDirectory: false,
@@ -112,7 +114,7 @@ describe('validateFile', () => {
     expect(() => validateFile('test.md')).not.toThrow()
   })
 
-  test('should throw error when file size exceeds limit', () => {
+  test('should throw an error when file size exceeds limit', () => {
     const threeMB = 3 * 1024 * 1024
     mockStats({
       isDirectory: false,
@@ -125,7 +127,7 @@ describe('validateFile', () => {
     )
   })
 
-  test('should not throw error when file size is exactly at limit', () => {
+  test('should not throw an error when file size is exactly at limit', () => {
     const exactlyTwoMB = 2 * 1024 * 1024
     mockStats({
       isDirectory: false,
@@ -136,7 +138,7 @@ describe('validateFile', () => {
     expect(() => validateFile('test.md')).not.toThrow()
   })
 
-  test('should throw error when file size is just over limit', () => {
+  test('should throw an error when file size is just over limit', () => {
     const justOverTwoMB = 2 * 1024 * 1024 + 1
     mockStats({
       isDirectory: false,
@@ -149,7 +151,7 @@ describe('validateFile', () => {
     )
   })
 
-  test('should not throw error when skipSizeCheck is true', () => {
+  test('should not throw an error when skipSizeCheck is true', () => {
     config.skipSizeCheck = true
     const tenMB = 10 * 1024 * 1024
     mockStats({
@@ -173,7 +175,7 @@ describe('validateFile', () => {
     expect(() => validateFile('test.md')).not.toThrow()
   })
 
-  test('should throw error with custom maxFileSizeMB when exceeded', () => {
+  test('should throw an error with custom maxFileSizeMB when exceeded', () => {
     config.maxFileSizeMB = 5
     const sixMB = 6 * 1024 * 1024
     mockStats({

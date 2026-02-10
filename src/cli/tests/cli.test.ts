@@ -56,13 +56,13 @@ describe('parseArguments', () => {
     expect(processExitSpy).toHaveBeenCalledWith(0)
   })
 
-  test('should throw error if no arguments are provided', () => {
+  test('should throw an error if no arguments are provided', () => {
     expect(() => parseArguments([])).toThrow(
       'Please provide a markdown file path as an argument',
     )
   })
 
-  test('should throw error if the first argument is empty string', () => {
+  test('should throw an error if the first argument is empty string', () => {
     expect(() => parseArguments([''])).toThrow(
       'Please provide a markdown file path as an argument',
     )
@@ -78,13 +78,13 @@ describe('parseArguments', () => {
       expect(config.port).toBe(8080)
     })
 
-    test('should throw error if port number is not valid', () => {
+    test('should throw an error if port number is not valid', () => {
       expect(() => parseArguments(['test.md', '--port', '0'])).toThrow(
         'Port must be between 1024 and 49151',
       )
     })
 
-    test('should throw error if port number is not provided', () => {
+    test('should throw an error if port number is not provided', () => {
       expect(() => parseArguments(['test.md', '--port'])).toThrow(
         'Port option requires a value',
       )
@@ -102,7 +102,7 @@ describe('parseArguments', () => {
       expect(config.skipSizeCheck).toBe(true)
     })
 
-    test('should throw error if max size is not positive number', () => {
+    test('should throw an error if max size is not positive number', () => {
       expect(() => parseArguments(['test.md', '--max-size', '0'])).toThrow(
         'Max size must be a positive number',
       )
@@ -112,13 +112,13 @@ describe('parseArguments', () => {
       )
     })
 
-    test('should throw error if max size is not valid', () => {
+    test('should throw an error if max size is not valid', () => {
       expect(() => parseArguments(['test.md', '--max-size', 'a'])).toThrow(
         'Max size must be a positive number',
       )
     })
 
-    test('should throw error if max size number is not provided', () => {
+    test('should throw an error if max size number is not provided', () => {
       expect(() => parseArguments(['test.md', '--max-size'])).toThrow(
         'Max size option requires a value',
       )

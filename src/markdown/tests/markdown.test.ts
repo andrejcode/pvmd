@@ -8,7 +8,6 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { ValidationError } from '../file-validation'
 import { parseMarkdown, readMarkdownFile } from '../index'
 
 describe('parseMarkdown', () => {
@@ -322,87 +321,77 @@ describe('readMarkdownFile', () => {
     expect(result).toBe(content)
   })
 
-  describe('ValidationError cases', () => {
-    test('should throw ValidationError for invalid file extension', () => {
-      const testFile = join(tempDir, 'test.js')
-      writeFileSync(testFile, '# Test content')
+  test('should throw an error for invalid file extension', () => {
+    const testFile = join(tempDir, 'test.js')
+    writeFileSync(testFile, '# Test content')
 
-      const validExtensions = [
-        '.md',
-        '.markdown',
-        '.mdown',
-        '.mkdn',
-        '.mkd',
-        '.mdwn',
-        '.mdtxt',
-        '.mdtext',
-      ]
+    const validExtensions = [
+      '.md',
+      '.markdown',
+      '.mdown',
+      '.mkdn',
+      '.mkd',
+      '.mdwn',
+      '.mdtxt',
+      '.mdtext',
+    ]
 
-      expect(() => readMarkdownFile(testFile)).toThrow(ValidationError)
-      expect(() => readMarkdownFile(testFile)).toThrow(
-        `Invalid extension for path: ${testFile}.\nExpected extensions: ${validExtensions.join(', ')}`,
-      )
+    expect(() => readMarkdownFile(testFile)).toThrow(
+      `Invalid extension for path: ${testFile}.\nExpected extensions: ${validExtensions.join(', ')}`,
+    )
 
-      unlinkSync(testFile)
-    })
-
-    test('should throw ValidationError when path is a directory', () => {
-      const dirPath = join(tempDir, 'directory')
-      mkdirSync(dirPath)
-
-      expect(() => readMarkdownFile(dirPath)).toThrow(ValidationError)
-      expect(() => readMarkdownFile(dirPath)).toThrow(
-        `Path is a directory: ${dirPath}`,
-      )
-    })
-
-    test('should throw ValidationError when path is a directory with .md extension', () => {
-      const dirPath = join(tempDir, 'directory.md')
-      mkdirSync(dirPath)
-
-      expect(() => readMarkdownFile(dirPath)).toThrow(ValidationError)
-      expect(() => readMarkdownFile(dirPath)).toThrow(
-        `Path is a directory: ${dirPath}`,
-      )
-    })
-
-    test('should throw ValidationError when path is a symbolic link', () => {
-      const targetFile = join(tempDir, 'target.md')
-      writeFileSync(targetFile, '# Target content')
-      const symlinkPath = join(tempDir, 'symlink.md')
-      symlinkSync(targetFile, symlinkPath)
-
-      expect(() => readMarkdownFile(symlinkPath)).toThrow(ValidationError)
-      expect(() => readMarkdownFile(symlinkPath)).toThrow(
-        `Path is a symbolic link: ${symlinkPath}`,
-      )
-
-      unlinkSync(symlinkPath)
-      unlinkSync(targetFile)
-    })
+    unlinkSync(testFile)
   })
 
-  describe('file system errors', () => {
-    test('should throw error message for non-existent file', () => {
-      const nonExistentFile = join(tempDir, 'nonexistent.md')
+  test('should throw an error when path is a directory', () => {
+    const dirPath = join(tempDir, 'directory')
+    mkdirSync(dirPath)
 
-      expect(() => readMarkdownFile(nonExistentFile)).toThrow(Error)
-      expect(() => readMarkdownFile(nonExistentFile)).toThrow(
-        `File not found: ${nonExistentFile}`,
-      )
-    })
+    expect(() => readMarkdownFile(dirPath)).toThrow(
+      `Path is a directory: ${dirPath}`,
+    )
+  })
 
-    test('should throw error for file without read permission', () => {
-      writeFileSync(testFilePath, '# Test content')
-      chmodSync(testFilePath, 0o000) // Remove all permissions
+  test('should throw an error when path is a directory with .md extension', () => {
+    const dirPath = join(tempDir, 'directory.md')
+    mkdirSync(dirPath)
 
-      expect(() => readMarkdownFile(testFilePath)).toThrow(Error)
-      expect(() => readMarkdownFile(testFilePath)).toThrow(
-        `Permission denied: ${testFilePath}`,
-      )
+    expect(() => readMarkdownFile(dirPath)).toThrow(
+      `Path is a directory: ${dirPath}`,
+    )
+  })
 
-      // Restore permissions for cleanup
-      chmodSync(testFilePath, 0o644)
-    })
+  test('should throw an error when path is a symbolic link', () => {
+    const targetFile = join(tempDir, 'target.md')
+    writeFileSync(targetFile, '# Target content')
+    const symlinkPath = join(tempDir, 'symlink.md')
+    symlinkSync(targetFile, symlinkPath)
+
+    expect(() => readMarkdownFile(symlinkPath)).toThrow(
+      `Path is a symbolic link: ${symlinkPath}`,
+    )
+
+    unlinkSync(symlinkPath)
+    unlinkSync(targetFile)
+  })
+
+  test('should throw an error message for non-existent file', () => {
+    const nonExistentFile = join(tempDir, 'nonexistent.md')
+
+    expect(() => readMarkdownFile(nonExistentFile)).toThrow(
+      `File not found: ${nonExistentFile}`,
+    )
+  })
+
+  test('should throw an error for file without read permission', () => {
+    writeFileSync(testFilePath, '# Test content')
+    chmodSync(testFilePath, 0o000) // Remove all permissions
+
+    expect(() => readMarkdownFile(testFilePath)).toThrow(
+      `Permission denied: ${testFilePath}`,
+    )
+
+    // Restore permissions for cleanup
+    chmodSync(testFilePath, 0o644)
   })
 })

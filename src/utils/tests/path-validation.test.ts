@@ -8,7 +8,7 @@ describe('resolvePath', () => {
     expect(resolvePath('test.md', baseDir)).toBe(resolve(baseDir, 'test.md'))
   })
 
-  test('should throw error if path traversal is attempted', () => {
+  test('should throw an error if path traversal is attempted', () => {
     expect(() => resolvePath('../../test.md', baseDir)).toThrow(
       `Path traversal are not allowed: ${resolve(baseDir, '../../test.md')}`,
     )

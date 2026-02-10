@@ -1,11 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { marked } from 'marked'
 import xss from 'xss'
-import {
-  ValidationError,
-  validateFile,
-  validateMarkdownExtension,
-} from './file-validation'
+import { validateFile, validateMarkdownExtension } from './file-validation'
 import { processFileSystemError } from '../utils/file-error'
 
 marked.use({
@@ -25,19 +21,17 @@ export function parseMarkdown(content: string): string {
   )
 }
 
-export function readMarkdownFile(path: string): string {
+export function readFile(path: string): string {
   try {
-    validateFile(path)
-    validateMarkdownExtension(path)
-
     return readFileSync(path, 'utf8')
   } catch (error) {
-    // ValidationError is thrown when the file is not a markdown file
-    // It has custom error messages, so we can throw it directly
-    if (error instanceof ValidationError) {
-      throw error
-    }
-
     throw new Error(processFileSystemError(error, path))
   }
+}
+
+export function readMarkdownFile(path: string): string {
+  validateFile(path)
+  validateMarkdownExtension(path)
+
+  return readFile(path)
 }
