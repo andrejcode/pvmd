@@ -6,11 +6,15 @@ import {
 } from 'node:http'
 import { config } from './cli/config'
 
-export function createServer(html: string): Server {
+type RequestHandler = (req: IncomingMessage, res: ServerResponse) => void
+
+export function createServer(html: string, handleSSE?: RequestHandler): Server {
   return createHttpServer((req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'GET' && req.url === '/') {
       res.writeHead(200, { 'content-type': 'text/html' })
       res.end(html)
+    } else if (req.method === 'GET' && req.url === '/events' && handleSSE) {
+      handleSSE(req, res)
     } else {
       res.writeHead(404, { 'content-type': 'application/json' })
       res.end(

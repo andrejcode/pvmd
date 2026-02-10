@@ -1,58 +1,58 @@
 import { watch, readFileSync } from 'node:fs'
-import type { Server } from 'node:http'
-import { WebSocketServer, WebSocket } from 'ws'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { parseMarkdown } from './markdown'
 import { processFileSystemError } from './utils/file-error'
 
-export default function createWatcher(server: Server, path: string) {
-  const wss = new WebSocketServer({ server })
+export default function createWatcher(path: string) {
+  let client: ServerResponse | null = null
 
-  let client: WebSocket | null = null
+  function handleSSE(_req: IncomingMessage, res: ServerResponse) {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    })
 
-  wss.on('connection', (ws: WebSocket) => {
-    if (client && client.readyState === WebSocket.OPEN) {
-      client.close()
+    if (client && !client.writableEnded) {
+      client.end()
     }
 
-    client = ws
+    client = res
 
-    ws.on('close', () => {
-      if (client === ws) {
+    res.on('close', () => {
+      if (client === res) {
         client = null
       }
     })
-
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error)
-      if (client === ws) {
-        client = null
-      }
-    })
-  })
+  }
 
   const watcher = watch(path, (event) => {
     if (event === 'rename') {
       console.error(`File ${path} was renamed or deleted. Exiting.`)
       watcher.close()
-      wss.close()
       process.exit(1)
     }
 
-    if (!client || client.readyState !== WebSocket.OPEN) {
+    if (!client || client.writableEnded) {
       return
     }
 
     try {
       const content = readFileSync(path, 'utf-8')
       const html = parseMarkdown(content)
-      client.send(html)
+      client.write(`data: ${JSON.stringify(html)}\n\n`)
     } catch (error) {
       throw new Error(processFileSystemError(error, path))
     }
   })
 
-  return () => {
-    watcher.close()
-    wss.close()
+  return {
+    handleSSE,
+    cleanup: () => {
+      watcher.close()
+      if (client && !client.writableEnded) {
+        client.end()
+      }
+    },
   }
 }

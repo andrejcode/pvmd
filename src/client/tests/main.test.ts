@@ -2,9 +2,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 describe('main', () => {
-  let mockWebSocket: {
+  let mockEventSource: {
     onopen: (() => void) | null
-    onclose: (() => void) | null
     onerror: (() => void) | null
     onmessage: ((event: MessageEvent) => void) | null
   }
@@ -18,15 +17,14 @@ describe('main', () => {
     const doc = parser.parseFromString(htmlContent, 'text/html')
     document.body.innerHTML = doc.body.innerHTML
 
-    mockWebSocket = {
+    mockEventSource = {
       onopen: null,
-      onclose: null,
       onerror: null,
       onmessage: null,
     }
 
-    // @ts-expect-error - Mocking WebSocket
-    global.WebSocket = vi.fn(() => mockWebSocket)
+    // @ts-expect-error - Mocking EventSource
+    global.EventSource = vi.fn(() => mockEventSource)
 
     vi.resetModules()
   })
@@ -38,11 +36,11 @@ describe('main', () => {
       const markdownContent = document.getElementById('markdown-content')
       const testHtml = '<h1>Test Content</h1>'
 
-      if (mockWebSocket.onmessage) {
+      if (mockEventSource.onmessage) {
         const mockEvent = new MessageEvent('message', {
-          data: testHtml,
+          data: JSON.stringify(testHtml),
         })
-        mockWebSocket.onmessage(mockEvent)
+        mockEventSource.onmessage(mockEvent)
       }
 
       expect(markdownContent?.innerHTML).toBe(testHtml)
@@ -58,27 +56,14 @@ describe('main', () => {
       expect(alert?.hidden).toBe(true)
     })
 
-    it('should appear when client is disconnected (onclose)', async () => {
+    it('should appear when connection is lost (onerror)', async () => {
       await import('../main')
 
       const alert = document.getElementById('disconnected-alert')
       expect(alert?.hidden).toBe(true)
 
-      if (mockWebSocket.onclose) {
-        mockWebSocket.onclose()
-      }
-
-      expect(alert?.hidden).toBe(false)
-    })
-
-    it('should appear when client encounters an error (onerror)', async () => {
-      await import('../main')
-
-      const alert = document.getElementById('disconnected-alert')
-      expect(alert?.hidden).toBe(true)
-
-      if (mockWebSocket.onerror) {
-        mockWebSocket.onerror()
+      if (mockEventSource.onerror) {
+        mockEventSource.onerror()
       }
 
       expect(alert?.hidden).toBe(false)
@@ -89,13 +74,13 @@ describe('main', () => {
 
       const alert = document.getElementById('disconnected-alert')
 
-      if (mockWebSocket.onclose) {
-        mockWebSocket.onclose()
+      if (mockEventSource.onerror) {
+        mockEventSource.onerror()
       }
       expect(alert?.hidden).toBe(false)
 
-      if (mockWebSocket.onopen) {
-        mockWebSocket.onopen()
+      if (mockEventSource.onopen) {
+        mockEventSource.onopen()
       }
 
       expect(alert?.hidden).toBe(true)
@@ -107,29 +92,12 @@ describe('main', () => {
       const alert = document.getElementById('disconnected-alert')
       const closeButton = document.getElementById('alert-close')
 
-      if (mockWebSocket.onclose) {
-        mockWebSocket.onclose()
+      if (mockEventSource.onerror) {
+        mockEventSource.onerror()
       }
       expect(alert?.hidden).toBe(false)
 
       closeButton?.click()
-
-      expect(alert?.hidden).toBe(true)
-    })
-
-    it('should handle reconnection hiding alert that was shown due to error', async () => {
-      await import('../main')
-
-      const alert = document.getElementById('disconnected-alert')
-
-      if (mockWebSocket.onerror) {
-        mockWebSocket.onerror()
-      }
-      expect(alert?.hidden).toBe(false)
-
-      if (mockWebSocket.onopen) {
-        mockWebSocket.onopen()
-      }
 
       expect(alert?.hidden).toBe(true)
     })

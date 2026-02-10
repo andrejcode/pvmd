@@ -1,7 +1,7 @@
 import 'github-markdown-css/github-markdown.css'
 import './styles.css'
 
-const ws = new WebSocket(`ws://${window.location.host}`)
+const eventSource = new EventSource('/events')
 const markdownContent = document.getElementById('markdown-content')
 const disconnectedAlert = document.getElementById('disconnected-alert')
 const closeAlertButton = document.getElementById('alert-close')
@@ -18,21 +18,17 @@ function hideDisconnectedAlert() {
   }
 }
 
-ws.onopen = () => {
+eventSource.onopen = () => {
   hideDisconnectedAlert()
 }
 
-ws.onclose = () => {
+eventSource.onerror = () => {
   showDisconnectedAlert()
 }
 
-ws.onerror = () => {
-  showDisconnectedAlert()
-}
-
-ws.onmessage = (event) => {
+eventSource.onmessage = (event) => {
   if (markdownContent && typeof event.data === 'string') {
-    markdownContent.innerHTML = event.data
+    markdownContent.innerHTML = JSON.parse(event.data) as string
   }
 }
 

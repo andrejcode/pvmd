@@ -50,6 +50,12 @@ const options: Record<string, Option> = {
       config.maxFileSizeMB = parsed
     },
   },
+  'no-watch': {
+    description: 'Skip file watching',
+    action: () => {
+      config.watch = false
+    },
+  },
 } as const
 
 function createOptionMaps() {
@@ -88,10 +94,6 @@ export function resolveOption(arg: string) {
 }
 
 export function showHelp() {
-  // TODO: Add options
-  // -y, --yes               Skip confirmation prompt
-  // --no-watch              Skip file watching
-
   const flagsToShow: Record<
     string,
     { flagString: string; description: string }

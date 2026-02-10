@@ -14,7 +14,7 @@ await build({
   platform: 'node',
   format: 'esm',
   outfile: 'dist/index.js',
-  external: ['node:*', 'ws'],
+  external: ['node:*'],
   minify: true,
   define: {
     'process.env.NODE_ENV': '"production"',
