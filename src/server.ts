@@ -24,6 +24,16 @@ export function createServer(html: string): Server {
 }
 
 export function startServer(server: Server) {
+  server.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(
+        `Port ${config.port} is already in use. Please use a different port.`,
+      )
+      process.exit(1)
+    }
+    throw error
+  })
+
   server.listen(config.port, '127.0.0.1', () => {
     console.log(`Server running at http://127.0.0.1:${config.port}/`)
   })
