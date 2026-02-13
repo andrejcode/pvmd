@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import {
   createServer as createHttpServer,
   type Server,
@@ -8,11 +9,40 @@ import { config } from './cli/config'
 
 type RequestHandler = (req: IncomingMessage, res: ServerResponse) => void
 
+export function generateNonce(): string {
+  return randomBytes(16).toString('base64')
+}
+
+export function applyNonce(html: string, nonce: string): string {
+  return html.replace(/<script>/g, `<script nonce="${nonce}">`)
+}
+
+export function buildCSPHeader(nonce: string): string {
+  return [
+    "default-src 'none'",
+    `script-src 'nonce-${nonce}'`,
+    "style-src 'unsafe-inline'",
+    'img-src * data: blob:',
+    "font-src 'self' data:",
+    "connect-src 'self'",
+    "frame-src 'none'",
+    "object-src 'none'",
+    "form-action 'none'",
+  ].join('; ')
+}
+
 export function createServer(html: string, handleSSE?: RequestHandler): Server {
+  const nonce = generateNonce()
+  const htmlWithNonce = applyNonce(html, nonce)
+  const csp = buildCSPHeader(nonce)
+
   return createHttpServer((req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'GET' && req.url === '/') {
-      res.writeHead(200, { 'content-type': 'text/html' })
-      res.end(html)
+      res.writeHead(200, {
+        'content-type': 'text/html',
+        'content-security-policy': csp,
+      })
+      res.end(htmlWithNonce)
     } else if (req.method === 'GET' && req.url === '/events' && handleSSE) {
       handleSSE(req, res)
     } else {
