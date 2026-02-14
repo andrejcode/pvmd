@@ -34,7 +34,8 @@
     "github-markdown-css": "^5.8.1",
     "marked": "^17.0.1",
     "marked-alert": "^2.1.2",
-    "marked-footnote": "^1.4.0"
+    "marked-footnote": "^1.4.0",
+    "marked-katex-extension": "^5.1.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",

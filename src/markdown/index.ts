@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { marked } from 'marked'
 import markedAlert from 'marked-alert'
 import markedFootnote from 'marked-footnote'
+import markedKatex from 'marked-katex-extension'
 import { validateFile, validateMarkdownExtension } from './file-validation'
 import { processFileSystemError } from '../utils/file-error'
 
@@ -14,6 +15,7 @@ marked.use(
   },
   markedAlert(),
   markedFootnote(),
+  markedKatex({ throwOnError: false }),
 )
 
 export function parseMarkdown(content: string): string {
