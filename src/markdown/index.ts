@@ -1,21 +1,34 @@
 import { readFileSync } from 'node:fs'
+import { Octokit } from '@octokit/rest'
 import { marked } from 'marked'
 import markedAlert from 'marked-alert'
+import { markedEmoji } from 'marked-emoji'
 import markedFootnote from 'marked-footnote'
 import markedKatex from 'marked-katex-extension'
 import { validateFile, validateMarkdownExtension } from './file-validation'
 import { processFileSystemError } from '../utils/file-error'
 
+const octokit = new Octokit()
+const res = await octokit.rest.emojis.get()
+const emojis = res.data
+
+const markedEmojiOptions = {
+  emojis,
+  renderer: (token: { name: string; emoji: string }) =>
+    `<g-emoji><img class="emoji" alt="${token.name}" src="${token.emoji}"></g-emoji>`,
+}
+
 marked.use(
   {
     async: false,
-    breaks: true,
+    breaks: false,
     gfm: true,
     pedantic: false,
   },
   markedAlert(),
   markedFootnote(),
   markedKatex({ throwOnError: false }),
+  markedEmoji(markedEmojiOptions),
 )
 
 export function parseMarkdown(content: string): string {

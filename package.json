@@ -31,9 +31,11 @@
     "format:check": "prettier . --check"
   },
   "dependencies": {
+    "@octokit/rest": "^22.0.1",
     "github-markdown-css": "^5.8.1",
     "marked": "^17.0.1",
     "marked-alert": "^2.1.2",
+    "marked-emoji": "^2.0.2",
     "marked-footnote": "^1.4.0",
     "marked-katex-extension": "^5.1.6"
   },
