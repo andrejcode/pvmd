@@ -25,14 +25,15 @@ function setupShutdownHandlers(server: Server, cleanup: () => void) {
 export function run(userPath: string) {
   const fullPath = resolvePath(userPath)
 
-  const markdownContent = readMarkdownFile(fullPath)
-  const parsedMarkdown = parseMarkdown(markdownContent)
-
-  const preparedHTML = prepareHTML(fullPath, parsedMarkdown)
-
   const watcher = config.watch ? createWatcher(fullPath) : null
 
-  const server = createServer(preparedHTML, watcher?.handleSSE)
+  const getHTML = () => {
+    const markdownContent = readMarkdownFile(fullPath)
+    const parsedMarkdown = parseMarkdown(markdownContent)
+    return prepareHTML(fullPath, parsedMarkdown)
+  }
+
+  const server = createServer(getHTML, watcher?.handleSSE)
   startServer(server)
 
   setupShutdownHandlers(server, watcher?.cleanup ?? (() => {}))

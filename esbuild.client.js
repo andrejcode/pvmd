@@ -32,7 +32,10 @@ const darkFavicon = await readFile(
 
 let output = html
 output = output.replace('<!-- STYLE_OUTLET -->', `<style>${css}</style>`)
-output = output.replace('<!-- SCRIPT_OUTLET -->', `<script>${js}</script>`)
+output = output.replace(
+  '<!-- SCRIPT_OUTLET -->',
+  `<script data-pvmd-app>${js}</script>`,
+)
 output = output.replace(
   /href="favicon\/light-favicon\.svg"/,
   `href="data:image/svg+xml,${encodeURIComponent(lightFavicon)}"`,

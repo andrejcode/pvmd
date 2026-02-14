@@ -13,8 +13,18 @@ export function generateNonce(): string {
   return randomBytes(16).toString('base64')
 }
 
+const SCRIPT_OUTLET_MARKER = 'data-pvmd-app'
+
+/**
+ * Adds nonce only to the app script we inject after </main>.
+ * We only replace the opening tag so we never match </script> inside the bundle.
+ * Scripts in markdown (inside <main>) are never touched.
+ */
 export function applyNonce(html: string, nonce: string): string {
-  return html.replace(/<script>/g, `<script nonce="${nonce}">`)
+  return html.replace(
+    new RegExp(`(</main>\\s*)<script\\s+${SCRIPT_OUTLET_MARKER}>`),
+    `$1<script ${SCRIPT_OUTLET_MARKER} nonce="${nonce}">`,
+  )
 }
 
 export function buildCSPHeader(nonce: string): string {
@@ -31,13 +41,17 @@ export function buildCSPHeader(nonce: string): string {
   ].join('; ')
 }
 
-export function createServer(html: string, handleSSE?: RequestHandler): Server {
-  const nonce = generateNonce()
-  const htmlWithNonce = applyNonce(html, nonce)
-  const csp = buildCSPHeader(nonce)
-
+export function createServer(
+  getHTML: () => string,
+  handleSSE?: RequestHandler,
+): Server {
   return createHttpServer((req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'GET' && req.url === '/') {
+      const html = getHTML()
+      const nonce = generateNonce()
+      const htmlWithNonce = applyNonce(html, nonce)
+      const csp = buildCSPHeader(nonce)
+
       res.writeHead(200, {
         'content-type': 'text/html',
         'content-security-policy': csp,
