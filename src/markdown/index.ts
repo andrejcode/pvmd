@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { marked } from 'marked'
 import markedAlert from 'marked-alert'
+import markedFootnote from 'marked-footnote'
 import { validateFile, validateMarkdownExtension } from './file-validation'
 import { processFileSystemError } from '../utils/file-error'
 
@@ -12,6 +13,7 @@ marked.use(
     pedantic: false,
   },
   markedAlert(),
+  markedFootnote(),
 )
 
 export function parseMarkdown(content: string): string {
