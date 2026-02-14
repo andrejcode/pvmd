@@ -9,25 +9,25 @@ import { config } from './cli/config'
 
 type RequestHandler = (req: IncomingMessage, res: ServerResponse) => void
 
-export function generateNonce(): string {
+function generateNonce(): string {
   return randomBytes(16).toString('base64')
 }
-
-const SCRIPT_OUTLET_MARKER = 'data-pvmd-app'
 
 /**
  * Adds nonce only to the app script we inject after </main>.
  * We only replace the opening tag so we never match </script> inside the bundle.
  * Scripts in markdown (inside <main>) are never touched.
  */
-export function applyNonce(html: string, nonce: string): string {
+function applyNonce(html: string, nonce: string): string {
+  const SCRIPT_OUTLET_MARKER = 'data-pvmd-app'
+
   return html.replace(
     new RegExp(`(</main>\\s*)<script\\s+${SCRIPT_OUTLET_MARKER}>`),
     `$1<script ${SCRIPT_OUTLET_MARKER} nonce="${nonce}">`,
   )
 }
 
-export function buildCSPHeader(nonce: string): string {
+function buildCSPHeader(nonce: string): string {
   return [
     "default-src 'none'",
     `script-src 'nonce-${nonce}'`,
