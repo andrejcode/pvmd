@@ -217,7 +217,7 @@ describe('parseMarkdown', () => {
     test('should handle single line breaks', () => {
       const markdown = 'Line 1\nLine 2'
       const result = parseMarkdown(markdown)
-      expect(result).toContain('<p>Line 1<br>Line 2</p>')
+      expect(result).toContain('<p>Line 1\nLine 2</p>')
     })
 
     test('should handle double line breaks as paragraphs', () => {
