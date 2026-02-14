@@ -4,7 +4,7 @@ import { parseMarkdown } from './markdown'
 import { processFileSystemError } from './utils/file-error'
 
 export default function createWatcher(path: string) {
-  let client: ServerResponse | null = null
+  const clients = new Set<ServerResponse>()
 
   function handleSSE(_req: IncomingMessage, res: ServerResponse) {
     res.writeHead(200, {
@@ -13,16 +13,10 @@ export default function createWatcher(path: string) {
       Connection: 'keep-alive',
     })
 
-    if (client && !client.writableEnded) {
-      client.end()
-    }
-
-    client = res
+    clients.add(res)
 
     res.on('close', () => {
-      if (client === res) {
-        client = null
-      }
+      clients.delete(res)
     })
   }
 
@@ -33,14 +27,19 @@ export default function createWatcher(path: string) {
       process.exit(1)
     }
 
-    if (!client || client.writableEnded) {
+    if (clients.size === 0) {
       return
     }
 
     try {
       const content = readFileSync(path, 'utf-8')
       const html = parseMarkdown(content)
-      client.write(`data: ${JSON.stringify(html)}\n\n`)
+      const data = `data: ${JSON.stringify(html)}\n\n`
+      for (const client of clients) {
+        if (!client.writableEnded) {
+          client.write(data)
+        }
+      }
     } catch (error) {
       throw new Error(processFileSystemError(error, path))
     }
@@ -50,9 +49,12 @@ export default function createWatcher(path: string) {
     handleSSE,
     cleanup: () => {
       watcher.close()
-      if (client && !client.writableEnded) {
-        client.end()
+      for (const client of clients) {
+        if (!client.writableEnded) {
+          client.end()
+        }
       }
+      clients.clear()
     },
   }
 }
