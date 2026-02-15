@@ -19,11 +19,11 @@ function generateNonce(): string {
  * Scripts in markdown (inside <main>) are never touched.
  */
 function applyNonce(html: string, nonce: string): string {
-  const SCRIPT_OUTLET_MARKER = 'data-pvmd-app'
+  const scriptOutletMarker = 'data-pvmd-app'
 
   return html.replace(
-    new RegExp(`(</main>\\s*)<script\\s+${SCRIPT_OUTLET_MARKER}>`),
-    `$1<script ${SCRIPT_OUTLET_MARKER} nonce="${nonce}">`,
+    new RegExp(`(</main>\\s*)<script\\s+${scriptOutletMarker}>`),
+    `$1<script ${scriptOutletMarker} nonce="${nonce}">`,
   )
 }
 
@@ -32,12 +32,14 @@ function buildCSPHeader(nonce: string): string {
     "default-src 'none'",
     `script-src 'nonce-${nonce}'`,
     "style-src 'unsafe-inline'",
-    'img-src * data: blob:',
+    'img-src * data:',
     "font-src 'self' data:",
     "connect-src 'self'",
     "frame-src 'none'",
+    "frame-ancestors 'none'",
     "object-src 'none'",
     "form-action 'none'",
+    "base-uri 'self'",
   ].join('; ')
 }
 
@@ -52,9 +54,18 @@ export function createServer(
       const htmlWithNonce = applyNonce(html, nonce)
       const csp = buildCSPHeader(nonce)
 
+      const securityHeaders = {
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'no-referrer',
+        'x-frame-options': 'DENY',
+        'permissions-policy':
+          'geolocation=(), microphone=(), camera=(), payment=(), usb=(), serial=(), bluetooth=()',
+      } as const
+
       res.writeHead(200, {
         'content-type': 'text/html',
         'content-security-policy': csp,
+        ...securityHeaders,
       })
       res.end(htmlWithNonce)
     } else if (req.method === 'GET' && req.url === '/events' && handleSSE) {
