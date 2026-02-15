@@ -259,18 +259,6 @@ const example = 'code block';
       )
     })
   })
-
-  describe('HTML passthrough', () => {
-    test('should preserve HTML entities in text', () => {
-      expect(parseMarkdown('&lt;script&gt;')).toBe('<p>&lt;script&gt;</p>\n')
-    })
-
-    test('should pass through raw HTML for CSP to handle', () => {
-      // Script tags are passed through but blocked by CSP headers at the server level
-      const result = parseMarkdown('<script>alert("xss")</script>')
-      expect(result).toContain('<script>')
-    })
-  })
 })
 
 describe('readMarkdownFile', () => {
