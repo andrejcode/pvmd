@@ -6,6 +6,7 @@ import { marked } from 'marked'
 import markedAlert from 'marked-alert'
 import { markedEmoji } from 'marked-emoji'
 import markedFootnote from 'marked-footnote'
+import { gfmHeadingId } from 'marked-gfm-heading-id'
 import { markedHighlight } from 'marked-highlight'
 import markedKatex from 'marked-katex-extension'
 import { validateFile, validateMarkdownExtension } from './file-validation'
@@ -40,6 +41,7 @@ marked.use(
       return scope ? toHtml(starryNight.highlight(code, scope)) : code
     },
   }),
+  gfmHeadingId(),
 )
 
 export function parseMarkdown(content: string): string {
