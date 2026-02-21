@@ -69,11 +69,10 @@ body {
 }
 
 #alert-close {
+  display: flex;
+  align-items: center;
   background: none;
   border: none;
-  color: #333;
-  font-size: 24px;
-  line-height: 1;
   cursor: pointer;
   padding: 0;
   margin: 0;
