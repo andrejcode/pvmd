@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-
 describe('main', () => {
   let mockEventSource: {
     onopen: (() => void) | null
@@ -9,13 +6,13 @@ describe('main', () => {
   }
 
   beforeEach(() => {
-    document.body.innerHTML = ''
-
-    const htmlPath = join(__dirname, '../index.html')
-    const htmlContent = readFileSync(htmlPath, 'utf-8')
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(htmlContent, 'text/html')
-    document.body.innerHTML = doc.body.innerHTML
+    document.body.innerHTML = `
+      <div id="disconnected-alert" hidden>
+        <span id="alert-message">Connection lost. Waiting to reconnect...</span>
+        <button id="alert-close" aria-label="Close alert"></button>
+      </div>
+      <main id="markdown-content" role="article" aria-live="polite" aria-atomic="false" aria-label="Markdown content"></main>
+    `
 
     mockEventSource = {
       onopen: null,
@@ -23,8 +20,11 @@ describe('main', () => {
       onmessage: null,
     }
 
-    // @ts-expect-error - Mocking EventSource
-    global.EventSource = vi.fn(() => mockEventSource)
+    ;(globalThis as Record<string, unknown>)['EventSource'] = vi.fn(
+      function () {
+        return mockEventSource
+      },
+    )
 
     vi.resetModules()
   })
