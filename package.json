@@ -33,29 +33,29 @@
   "dependencies": {
     "@octokit/rest": "^22.0.1",
     "@wooorm/starry-night": "^3.9.0",
-    "github-markdown-css": "^5.8.1",
+    "github-markdown-css": "^5.9.0",
     "hast-util-to-html": "^9.0.5",
-    "marked": "^17.0.1",
+    "marked": "^17.0.3",
     "marked-alert": "^2.1.2",
     "marked-emoji": "^2.0.2",
     "marked-footnote": "^1.4.0",
     "marked-highlight": "^2.2.3",
-    "marked-katex-extension": "^5.1.6"
+    "marked-katex-extension": "^5.1.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
-    "@types/node": "^24.6.2",
-    "esbuild": "^0.25.10",
+    "@types/node": "^25.3.0",
+    "esbuild": "^0.27.3",
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
-    "globals": "^16.5.0",
-    "jsdom": "^27.2.0",
-    "prettier": "^3.6.2",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2",
-    "typescript-eslint": "^8.44.0",
-    "vitest": "^3.2.4"
+    "globals": "^17.3.0",
+    "jsdom": "^28.1.0",
+    "prettier": "^3.8.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.0",
+    "vitest": "^4.0.18"
   }
 }
