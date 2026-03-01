@@ -22,7 +22,7 @@ function applyNonce(html: string, nonce: string): string {
   const scriptOutletMarker = 'data-pvmd-app'
 
   return html.replace(
-    new RegExp(`(</main>\\s*)<script\\s+${scriptOutletMarker}>`),
+    new RegExp(`(</main>[\\s\\S]*?)<script\\s+${scriptOutletMarker}>`),
     `$1<script ${scriptOutletMarker} nonce="${nonce}">`,
   )
 }
