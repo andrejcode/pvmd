@@ -28,8 +28,40 @@ body {
 }
 
 .markdown-body pre {
+  position: relative;
   max-width: 100%;
   min-width: 0;
+}
+
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--fgColor-muted);
+  transition: background-color 0.15s ease;
+}
+
+.copy-button:hover {
+  background-color: var(--bgColor-neutral-muted);
+}
+
+.copy-button:active {
+  background-color: var(--bgColor-neutral-muted);
+}
+
+.copy-button.copied {
+  color: var(--fgColor-success);
+  opacity: 1;
 }
 
 .markdown-body table {

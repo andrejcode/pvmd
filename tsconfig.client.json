@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
   "include": ["src/client/**/*.ts"],
   "compilerOptions": {
-    "lib": ["esnext", "dom"],
+    "lib": ["esnext", "dom", "dom.iterable"],
     "types": ["vitest/globals"]
   }
 }

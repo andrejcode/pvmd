@@ -16,6 +16,7 @@ export async function assembleHTML(result, outdir) {
     'utf-8',
   )
   const closeIcon = await readFile('src/client/icons/close.svg', 'utf-8')
+  const copyIcon = await readFile('src/client/icons/copy.svg', 'utf-8')
 
   let output = html
   output = output.replace('<!-- STYLE_OUTLET -->', `<style>${css}</style>`)
@@ -35,6 +36,7 @@ export async function assembleHTML(result, outdir) {
     '<!-- CLOSE_ICON_OUTLET -->',
     `<img src="data:image/svg+xml,${encodeURIComponent(closeIcon)}" alt="Close" />`,
   )
+  output = output.replace('<!-- COPY_ICON_OUTLET -->', copyIcon)
 
   await mkdir(outdir, { recursive: true })
   await writeFile(`${outdir}/index.html`, output)
