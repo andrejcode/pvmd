@@ -11,6 +11,7 @@ import { join } from 'node:path'
 import { parseMarkdown, readMarkdownFile } from '../index'
 
 describe('parseMarkdown', () => {
+  // prettier-ignore
   test('should correctly parse headings', () => {
     expect(parseMarkdown('# Heading 1')).toContain('<h1 id="heading-1">Heading 1</h1>')
     expect(parseMarkdown('## Heading 2')).toContain('<h2 id="heading-2">Heading 2</h2>')
