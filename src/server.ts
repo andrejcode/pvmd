@@ -6,6 +6,7 @@ import {
   type ServerResponse,
 } from 'node:http'
 import { config } from './cli/config'
+import { resolveStaticFile } from './utils/static-file'
 
 type RequestHandler = (req: IncomingMessage, res: ServerResponse) => void
 
@@ -43,9 +44,37 @@ function buildCSPHeader(nonce: string): string {
   ].join('; ')
 }
 
+function respondNotFound(req: IncomingMessage, res: ServerResponse) {
+  res.writeHead(404, { 'content-type': 'application/json' })
+  res.end(
+    JSON.stringify({
+      error: 'Not Found',
+      message: `Cannot ${req.method} ${req.url}`,
+    }),
+  )
+}
+
+function serveStaticFile(
+  req: IncomingMessage,
+  res: ServerResponse,
+  baseDir: string,
+): void {
+  try {
+    const [pathPart = ''] = (req.url ?? '').split('?')
+    const decodedPath = decodeURIComponent(pathPart)
+    const relativePath = decodedPath.replace(/^\/+/, '')
+    const { data, headers } = resolveStaticFile(relativePath, baseDir)
+    res.writeHead(200, headers)
+    res.end(data)
+  } catch {
+    respondNotFound(req, res)
+  }
+}
+
 export function createServer(
   getHTML: () => string,
   handleSSE?: RequestHandler,
+  baseDir?: string,
 ): Server {
   return createHttpServer((req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'GET' && req.url === '/') {
@@ -70,14 +99,10 @@ export function createServer(
       res.end(htmlWithNonce)
     } else if (req.method === 'GET' && req.url === '/events' && handleSSE) {
       handleSSE(req, res)
+    } else if (req.method === 'GET' && req.url && baseDir) {
+      serveStaticFile(req, res, baseDir)
     } else {
-      res.writeHead(404, { 'content-type': 'application/json' })
-      res.end(
-        JSON.stringify({
-          error: 'Not Found',
-          message: `Cannot ${req.method} ${req.url}`,
-        }),
-      )
+      respondNotFound(req, res)
     }
   })
 }

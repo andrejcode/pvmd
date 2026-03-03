@@ -1,4 +1,7 @@
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import type { Server } from 'node:http'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { createServer } from '../server'
 
 const HTML_WITH_APP_SCRIPT = [
@@ -87,6 +90,149 @@ describe('createServer', () => {
 
       const json = (await res.json()) as { message: string }
       expect(json.message).toBe('Cannot POST /')
+    } finally {
+      server.close()
+    }
+  })
+})
+
+describe('static file serving', () => {
+  const tmpDir = mkdtempSync(join(tmpdir(), 'pvmd-test-'))
+  const pngContent = Buffer.from('fake png content')
+  const svgContent = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+  )
+
+  beforeAll(() => {
+    writeFileSync(join(tmpDir, 'photo.png'), pngContent)
+    writeFileSync(join(tmpDir, 'icon.svg'), svgContent)
+    mkdirSync(join(tmpDir, 'sub'))
+    writeFileSync(join(tmpDir, 'sub', 'nested.jpg'), pngContent)
+    writeFileSync(join(tmpDir, 'script.js'), 'alert(1)')
+  })
+
+  afterAll(() => {
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  test('serves image file with correct content-type and body', async () => {
+    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/photo.png`)
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toBe('image/png')
+      expect(res.headers.get('cache-control')).toBe('no-cache')
+      expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+
+      const body = Buffer.from(await res.arrayBuffer())
+      expect(body).toEqual(pngContent)
+    } finally {
+      server.close()
+    }
+  })
+
+  test('serves files from nested directories', async () => {
+    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/sub/nested.jpg`)
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toBe('image/jpeg')
+    } finally {
+      server.close()
+    }
+  })
+
+  test('SVG response includes restrictive CSP header', async () => {
+    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/icon.svg`)
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toBe('image/svg+xml')
+      expect(res.headers.get('content-security-policy')).toBe(
+        "default-src 'none'; style-src 'unsafe-inline'",
+      )
+    } finally {
+      server.close()
+    }
+  })
+
+  test('returns 404 for non-image file extensions', async () => {
+    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/script.js`)
+      expect(res.status).toBe(404)
+    } finally {
+      server.close()
+    }
+  })
+
+  test('returns 404 for non-existent image files', async () => {
+    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/missing.png`)
+      expect(res.status).toBe(404)
+    } finally {
+      server.close()
+    }
+  })
+
+  test('returns 404 for path traversal attempts', async () => {
+    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/../../etc/passwd.png`)
+      expect(res.status).toBe(404)
+    } finally {
+      server.close()
+    }
+  })
+
+  test('returns 404 for URL-encoded path traversal attempts', async () => {
+    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:${port}/%2e%2e/%2e%2e/etc/passwd.png`,
+      )
+      expect(res.status).toBe(404)
+    } finally {
+      server.close()
+    }
+  })
+
+  test('strips query strings before resolving files', async () => {
+    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/photo.png?v=123`)
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toBe('image/png')
+    } finally {
+      server.close()
+    }
+  })
+
+  test('without baseDir, unknown paths still return 404', async () => {
+    const server = createServer(() => HTML_WITH_APP_SCRIPT)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/photo.png`)
+      expect(res.status).toBe(404)
+      expect(res.headers.get('content-type')).toBe('application/json')
     } finally {
       server.close()
     }

@@ -1,4 +1,5 @@
 import type { Server } from 'node:http'
+import { dirname } from 'node:path'
 import { config } from './cli/config'
 import { parseMarkdown, readMarkdownFile } from './markdown'
 import { createServer, startServer } from './server'
@@ -33,7 +34,7 @@ export function run(userPath: string) {
     return prepareHTML(fullPath, parsedMarkdown)
   }
 
-  const server = createServer(getHTML, watcher?.handleSSE)
+  const server = createServer(getHTML, watcher?.handleSSE, dirname(fullPath))
   startServer(server)
 
   setupShutdownHandlers(server, watcher?.cleanup ?? (() => {}))
