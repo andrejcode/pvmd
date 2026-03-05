@@ -1,11 +1,11 @@
 import fs from 'node:fs'
-import { validateFile } from '../../markdown/file-validation'
+import { validateFile } from '@/markdown/file-validation'
 import { resolvePath } from '../path-validation'
 import { resolveStaticFile } from '../static-file'
 
 vi.mock('node:fs')
 vi.mock('../path-validation')
-vi.mock('../../markdown/file-validation')
+vi.mock('@/markdown/file-validation')
 
 const BASE_DIR = '/project'
 const FAKE_DATA = Buffer.from('fake image data')

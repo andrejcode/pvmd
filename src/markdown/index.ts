@@ -9,8 +9,8 @@ import markedFootnote from 'marked-footnote'
 import { gfmHeadingId } from 'marked-gfm-heading-id'
 import { markedHighlight } from 'marked-highlight'
 import markedKatex from 'marked-katex-extension'
+import { processFileSystemError } from '@/utils/file-error'
 import { validateFile, validateMarkdownExtension } from './file-validation'
-import { processFileSystemError } from '../utils/file-error'
 
 const octokit = new Octokit()
 const res = await octokit.rest.emojis.get()

@@ -16,6 +16,9 @@ await build({
   outfile: 'dist/index.js',
   external: ['node:*'],
   minify: true,
+  alias: {
+    '@': './src',
+  },
   define: {
     'process.env.NODE_ENV': '"production"',
     'process.env.PVMD_VERSION': `"${packageJson.version}"`,

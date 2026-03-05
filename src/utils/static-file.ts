@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { extname } from 'node:path'
+import { validateFile } from '@/markdown/file-validation'
 import { resolvePath } from './path-validation'
-import { validateFile } from '../markdown/file-validation'
 
 export interface StaticFileResult {
   data: Buffer

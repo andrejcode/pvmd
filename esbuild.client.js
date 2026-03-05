@@ -9,6 +9,9 @@ const result = await build({
   write: false,
   minify: true,
   outdir: 'dist/client',
+  alias: {
+    '@': './src',
+  },
   loader: {
     '.css': 'css',
   },

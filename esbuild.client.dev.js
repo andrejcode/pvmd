@@ -14,6 +14,9 @@ const ctx = await context({
   minify: false,
   sourcemap: 'inline',
   outdir,
+  alias: {
+    '@': './src',
+  },
   loader: {
     '.css': 'css',
   },

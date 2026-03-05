@@ -4,6 +4,10 @@
     "target": "es2020",
     "moduleResolution": "bundler",
     "declaration": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
     "strict": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,

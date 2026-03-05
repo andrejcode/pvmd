@@ -1,7 +1,7 @@
 import { lstatSync, type Stats } from 'node:fs'
 import { extname } from 'node:path'
-import { config } from '../cli/config'
-import { processFileSystemError } from '../utils/file-error'
+import { config } from '@/cli/config'
+import { processFileSystemError } from '@/utils/file-error'
 
 export function validateMarkdownExtension(path: string): void {
   const validExtensions = [

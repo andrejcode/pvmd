@@ -34,6 +34,13 @@ export default defineConfig(
             ['sibling', 'parent'],
             'index',
           ],
+          pathGroups: [
+            {
+              pattern: '@/**',
+              group: 'internal',
+            },
+          ],
+          pathGroupsExcludedImportTypes: ['builtin'],
           'newlines-between': 'never',
           distinctGroup: false,
           alphabetize: {

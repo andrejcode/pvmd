@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import { config } from '../../cli/config'
+import { config } from '@/cli/config'
 import { validateMarkdownExtension, validateFile } from '../file-validation'
 
 vi.mock('node:fs')
