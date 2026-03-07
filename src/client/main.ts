@@ -21,6 +21,8 @@ function hideDisconnectedAlert() {
   }
 }
 
+const httpsOnly = document.body.hasAttribute('data-https-only')
+
 function addCopyButtons() {
   if (!copyIconTemplate || !markdownContent) return
 
@@ -50,6 +52,42 @@ function addCopyButtons() {
   }
 }
 
+function blockInsecureContent() {
+  if (!httpsOnly || !markdownContent) return
+
+  const links = markdownContent.querySelectorAll<HTMLAnchorElement>('a[href]')
+  for (const link of links) {
+    const href = link.getAttribute('href') ?? ''
+    if (href.startsWith('http://')) {
+      link.removeAttribute('href')
+      link.setAttribute('role', 'link')
+      link.setAttribute('aria-disabled', 'true')
+      link.title = 'Blocked: HTTP links are not allowed in HTTPS-only mode'
+    }
+  }
+
+  const images = markdownContent.querySelectorAll<HTMLImageElement>('img[src]')
+  for (const img of images) {
+    const src = img.getAttribute('src') ?? ''
+    if (src.startsWith('http://')) {
+      img.remove()
+    }
+  }
+}
+
+function openExternalLinksInNewTab() {
+  if (!markdownContent) return
+
+  const links = markdownContent.querySelectorAll<HTMLAnchorElement>('a[href]')
+  for (const link of links) {
+    const href = link.getAttribute('href') ?? ''
+    if (href.startsWith('http://') || href.startsWith('https://')) {
+      link.setAttribute('target', '_blank')
+      link.setAttribute('rel', 'noopener noreferrer')
+    }
+  }
+}
+
 eventSource.onopen = () => {
   hideDisconnectedAlert()
 }
@@ -62,6 +100,8 @@ eventSource.onmessage = (event) => {
   if (markdownContent && typeof event.data === 'string') {
     markdownContent.innerHTML = JSON.parse(event.data) as string
     addCopyButtons()
+    openExternalLinksInNewTab()
+    blockInsecureContent()
   }
 }
 
@@ -72,3 +112,5 @@ if (closeAlertButton) {
 }
 
 addCopyButtons()
+openExternalLinksInNewTab()
+blockInsecureContent()

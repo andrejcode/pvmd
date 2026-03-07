@@ -3,6 +3,7 @@ interface Config {
   skipSizeCheck: boolean
   maxFileSizeMB: number
   watch: boolean
+  httpsOnly: boolean
 }
 
 export const config: Config = {
@@ -10,4 +11,5 @@ export const config: Config = {
   skipSizeCheck: false,
   maxFileSizeMB: 2,
   watch: true,
+  httpsOnly: false,
 }

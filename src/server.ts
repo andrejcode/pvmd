@@ -29,11 +29,15 @@ function applyNonce(html: string, nonce: string): string {
 }
 
 function buildCSPHeader(nonce: string): string {
+  const imgSrc = config.httpsOnly
+    ? "img-src 'self' https: data:"
+    : 'img-src * data:'
+
   return [
     "default-src 'none'",
     `script-src 'nonce-${nonce}'`,
     "style-src 'unsafe-inline'",
-    'img-src * data:',
+    imgSrc,
     "font-src 'self' data:",
     "connect-src 'self'",
     "frame-src 'none'",
@@ -78,7 +82,10 @@ export function createServer(
 ): Server {
   return createHttpServer((req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'GET' && req.url === '/') {
-      const html = getHTML()
+      let html = getHTML()
+      if (config.httpsOnly) {
+        html = html.replace('<body', '<body data-https-only')
+      }
       const nonce = generateNonce()
       const htmlWithNonce = applyNonce(html, nonce)
       const csp = buildCSPHeader(nonce)

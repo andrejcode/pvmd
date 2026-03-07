@@ -2,6 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import type { Server } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { config } from '@/cli/config'
 import { createServer } from '../server'
 
 const HTML_WITH_APP_SCRIPT = [
@@ -73,6 +74,65 @@ describe('createServer', () => {
         error: 'Not Found',
         message: 'Cannot GET /some-path',
       })
+    } finally {
+      server.close()
+    }
+  })
+
+  test('GET / with httpsOnly restricts img-src to https: in CSP', async () => {
+    config.httpsOnly = true
+    const server = createServer(() => HTML_WITH_APP_SCRIPT)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/`)
+      const csp = res.headers.get('content-security-policy')
+      expect(csp).toContain('img-src https: data:')
+      expect(csp).not.toContain('img-src *')
+    } finally {
+      config.httpsOnly = false
+      server.close()
+    }
+  })
+
+  test('GET / with httpsOnly injects data-https-only on body', async () => {
+    config.httpsOnly = true
+    const server = createServer(() => HTML_WITH_APP_SCRIPT)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/`)
+      const body = await res.text()
+      expect(body).toContain('data-https-only')
+    } finally {
+      config.httpsOnly = false
+      server.close()
+    }
+  })
+
+  test('GET / without httpsOnly allows all img-src in CSP', async () => {
+    config.httpsOnly = false
+    const server = createServer(() => HTML_WITH_APP_SCRIPT)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/`)
+      const csp = res.headers.get('content-security-policy')
+      expect(csp).toContain('img-src * data:')
+    } finally {
+      server.close()
+    }
+  })
+
+  test('GET / without httpsOnly does not inject data-https-only', async () => {
+    config.httpsOnly = false
+    const server = createServer(() => HTML_WITH_APP_SCRIPT)
+    const port = await listenOnRandomPort(server)
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/`)
+      const body = await res.text()
+      expect(body).not.toContain('data-https-only')
     } finally {
       server.close()
     }

@@ -56,6 +56,12 @@ const options: Record<string, Option> = {
       config.watch = false
     },
   },
+  'https-only': {
+    description: 'Only allow HTTPS URLs for images and links',
+    action: () => {
+      config.httpsOnly = true
+    },
+  },
 } as const
 
 function createOptionMaps() {

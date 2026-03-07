@@ -36,7 +36,7 @@ describe('main', () => {
   })
 
   describe('markdown content', () => {
-    it('should update markdown content on message', async () => {
+    test('should update markdown content on message', async () => {
       await import('../main')
 
       const markdownContent = document.getElementById('markdown-content')
@@ -62,7 +62,7 @@ describe('main', () => {
       }
     }
 
-    it('should add a copy button to each code block', async () => {
+    test('should add a copy button to each code block', async () => {
       await import('../main')
 
       sendMarkdown(
@@ -76,7 +76,7 @@ describe('main', () => {
       })
     })
 
-    it('should not add copy buttons when there are no code blocks', async () => {
+    test('should not add copy buttons when there are no code blocks', async () => {
       await import('../main')
 
       sendMarkdown('<p>No code here</p>')
@@ -84,7 +84,7 @@ describe('main', () => {
       expect(document.querySelectorAll('.copy-button')).toHaveLength(0)
     })
 
-    it('should clone the icon template into each button', async () => {
+    test('should clone the icon template into each button', async () => {
       await import('../main')
 
       sendMarkdown('<pre><code>hello</code></pre>')
@@ -94,7 +94,7 @@ describe('main', () => {
       expect(svg).toBeTruthy()
     })
 
-    it('should copy code text to clipboard on click', async () => {
+    test('should copy code text to clipboard on click', async () => {
       await import('../main')
 
       sendMarkdown('<pre><code>console.log("hi")</code></pre>')
@@ -105,7 +105,7 @@ describe('main', () => {
       expect(mockWriteText).toHaveBeenCalledWith('console.log("hi")')
     })
 
-    it('should add and remove the "copied" class as feedback', async () => {
+    test('should add and remove the "copied" class as feedback', async () => {
       vi.useFakeTimers()
       await import('../main')
 
@@ -124,7 +124,7 @@ describe('main', () => {
       vi.useRealTimers()
     })
 
-    it('should replace old copy buttons when content updates', async () => {
+    test('should replace old copy buttons when content updates', async () => {
       await import('../main')
 
       sendMarkdown('<pre><code>first</code></pre>')
@@ -137,8 +137,108 @@ describe('main', () => {
     })
   })
 
+  describe('https-only mode', () => {
+    function sendMarkdown(html: string) {
+      if (mockEventSource.onmessage) {
+        mockEventSource.onmessage(
+          new MessageEvent('message', { data: JSON.stringify(html) }),
+        )
+      }
+    }
+
+    test('should block http:// links when data-https-only is set', async () => {
+      document.body.setAttribute('data-https-only', '')
+      await import('../main')
+
+      sendMarkdown(
+        '<a href="http://example.com">HTTP Link</a><a href="https://example.com">HTTPS Link</a>',
+      )
+
+      const links = document.querySelectorAll('a')
+      const httpLink = links[0]!
+      const httpsLink = links[1]!
+
+      expect(httpLink.hasAttribute('href')).toBe(false)
+      expect(httpLink.getAttribute('aria-disabled')).toBe('true')
+      expect(httpsLink.getAttribute('href')).toBe('https://example.com')
+    })
+
+    test('should add target=_blank and rel=noopener noreferrer to all external links', async () => {
+      document.body.setAttribute('data-https-only', '')
+      await import('../main')
+
+      sendMarkdown(
+        '<a href="https://example.com">HTTPS</a><a href="http://example.com">HTTP</a>',
+      )
+
+      const links = document.querySelectorAll('a')
+      const httpsLink = links[0]!
+      expect(httpsLink.getAttribute('target')).toBe('_blank')
+      expect(httpsLink.getAttribute('rel')).toBe('noopener noreferrer')
+
+      const httpLink = links[1]!
+      expect(httpLink.getAttribute('target')).toBe('_blank')
+      expect(httpLink.getAttribute('rel')).toBe('noopener noreferrer')
+    })
+
+    test('should not add target=_blank to relative links', async () => {
+      document.body.setAttribute('data-https-only', '')
+      await import('../main')
+
+      sendMarkdown(
+        '<a href="#heading">Anchor</a><a href="./other.md">Relative</a>',
+      )
+
+      const links = document.querySelectorAll('a')
+      for (const link of links) {
+        expect(link.hasAttribute('target')).toBe(false)
+      }
+    })
+
+    test('should remove http:// images', async () => {
+      document.body.setAttribute('data-https-only', '')
+      await import('../main')
+
+      sendMarkdown(
+        '<img src="http://example.com/img.png"><img src="https://example.com/img.png">',
+      )
+
+      const images = document.querySelectorAll('img')
+      expect(images).toHaveLength(1)
+      expect(images[0]!.getAttribute('src')).toBe('https://example.com/img.png')
+    })
+
+    test('should not block http links when data-https-only is not set', async () => {
+      document.body.removeAttribute('data-https-only')
+      await import('../main')
+
+      sendMarkdown(
+        '<a href="http://example.com">HTTP</a><a href="https://example.com">HTTPS</a>',
+      )
+
+      const links = document.querySelectorAll('a')
+      expect(links[0]!.getAttribute('href')).toBe('http://example.com')
+      expect(links[1]!.getAttribute('href')).toBe('https://example.com')
+    })
+
+    test('should still secure external links when data-https-only is not set', async () => {
+      document.body.removeAttribute('data-https-only')
+      await import('../main')
+
+      sendMarkdown(
+        '<a href="http://example.com">HTTP</a><a href="https://example.com">HTTPS</a>',
+      )
+
+      const links = document.querySelectorAll('a')
+      for (const link of links) {
+        expect(link.getAttribute('target')).toBe('_blank')
+        expect(link.getAttribute('rel')).toBe('noopener noreferrer')
+      }
+    })
+  })
+
   describe('disconnected alert', () => {
-    it('should be hidden initially', async () => {
+    test('should be hidden initially', async () => {
       await import('../main')
 
       const alert = document.getElementById('disconnected-alert')
@@ -146,7 +246,7 @@ describe('main', () => {
       expect(alert?.hidden).toBe(true)
     })
 
-    it('should appear when connection is lost (onerror)', async () => {
+    test('should appear when connection is lost (onerror)', async () => {
       await import('../main')
 
       const alert = document.getElementById('disconnected-alert')
@@ -159,7 +259,7 @@ describe('main', () => {
       expect(alert?.hidden).toBe(false)
     })
 
-    it('should disappear when client reconnects (onopen)', async () => {
+    test('should disappear when client reconnects (onopen)', async () => {
       await import('../main')
 
       const alert = document.getElementById('disconnected-alert')
@@ -176,7 +276,7 @@ describe('main', () => {
       expect(alert?.hidden).toBe(true)
     })
 
-    it('should hide alert when close button is clicked', async () => {
+    test('should hide alert when close button is clicked', async () => {
       await import('../main')
 
       const alert = document.getElementById('disconnected-alert')

@@ -96,6 +96,13 @@ describe('parseArguments', () => {
     })
   })
 
+  describe('https-only option', () => {
+    test('should set config.httpsOnly to true when --https-only is provided', () => {
+      parseArguments(['test.md', '--https-only'])
+      expect(config.httpsOnly).toBe(true)
+    })
+  })
+
   describe('size options', () => {
     test('should update the config if an option is provided', () => {
       parseArguments(['test.md', '--no-size-check'])
