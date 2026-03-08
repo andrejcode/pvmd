@@ -92,7 +92,7 @@ describe('createServer', () => {
     try {
       const res = await fetch(`http://127.0.0.1:${port}/`)
       const csp = res.headers.get('content-security-policy')
-      expect(csp).toContain('img-src https: data:')
+      expect(csp).toContain("img-src 'self' https: data:")
       expect(csp).not.toContain('img-src *')
     } finally {
       config.httpsOnly = false
