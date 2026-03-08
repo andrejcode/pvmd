@@ -126,6 +126,11 @@ export function startServer(server: Server) {
   })
 
   server.listen(config.port, '127.0.0.1', () => {
-    console.log(`Server running at http://127.0.0.1:${config.port}/`)
+    const url = `http://127.0.0.1:${config.port}/`
+    console.log(`Server running at ${url}`)
+
+    if (config.open) {
+      void import('open').then(({ default: open }) => open(url))
+    }
   })
 }

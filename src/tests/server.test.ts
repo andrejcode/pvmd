@@ -2,8 +2,13 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import type { Server } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { type MockInstance } from 'vitest'
 import { config } from '@/cli/config'
-import { createServer } from '../server'
+import { createServer, startServer } from '../server'
+
+vi.mock('open', () => ({
+  default: vi.fn(() => Promise.resolve()),
+}))
 
 const HTML_WITH_APP_SCRIPT = [
   '<!doctype html>',
@@ -153,6 +158,58 @@ describe('createServer', () => {
     } finally {
       server.close()
     }
+  })
+})
+
+describe('startServer', () => {
+  let consoleSpy: MockInstance
+  let savedPort: number
+
+  beforeEach(() => {
+    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    savedPort = config.port
+    config.port = 0
+  })
+
+  afterEach(() => {
+    consoleSpy.mockRestore()
+    config.open = false
+    config.port = savedPort
+  })
+
+  test('calls open with server URL when config.open is true', async () => {
+    const open = (await import('open')).default as ReturnType<typeof vi.fn>
+    open.mockClear()
+
+    config.open = true
+    const server = createServer(() => HTML_WITH_APP_SCRIPT)
+    startServer(server)
+
+    await vi.waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled()
+    })
+
+    await vi.waitFor(() => {
+      expect(open).toHaveBeenCalledWith(`http://127.0.0.1:${config.port}/`)
+    })
+
+    server.close()
+  })
+
+  test('does not call open when config.open is false', async () => {
+    const open = (await import('open')).default as ReturnType<typeof vi.fn>
+    open.mockClear()
+
+    config.open = false
+    const server = createServer(() => HTML_WITH_APP_SCRIPT)
+    startServer(server)
+
+    await vi.waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled()
+    })
+
+    expect(open).not.toHaveBeenCalled()
+    server.close()
   })
 })
 

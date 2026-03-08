@@ -62,6 +62,13 @@ const options: Record<string, Option> = {
       config.httpsOnly = true
     },
   },
+  open: {
+    alias: 'o',
+    description: 'Open in default browser automatically',
+    action: () => {
+      config.open = true
+    },
+  },
 } as const
 
 function createOptionMaps() {

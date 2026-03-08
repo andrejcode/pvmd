@@ -4,6 +4,7 @@ interface Config {
   maxFileSizeMB: number
   watch: boolean
   httpsOnly: boolean
+  open: boolean
 }
 
 export const config: Config = {
@@ -12,4 +13,5 @@ export const config: Config = {
   maxFileSizeMB: 2,
   watch: true,
   httpsOnly: false,
+  open: false,
 }

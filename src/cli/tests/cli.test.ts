@@ -103,6 +103,18 @@ describe('parseArguments', () => {
     })
   })
 
+  describe('open option', () => {
+    test('should set config.open to true when --open is provided', () => {
+      parseArguments(['test.md', '--open'])
+      expect(config.open).toBe(true)
+    })
+
+    test('should set config.open to true when -o is provided', () => {
+      parseArguments(['test.md', '-o'])
+      expect(config.open).toBe(true)
+    })
+  })
+
   describe('size options', () => {
     test('should update the config if an option is provided', () => {
       parseArguments(['test.md', '--no-size-check'])
