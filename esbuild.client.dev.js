@@ -1,28 +1,15 @@
 import { context } from 'esbuild'
 import { watch } from 'node:fs'
-import { assembleHTML } from './esbuild.client.common.js'
+import { assembleHTML, clientBuildOptions } from './esbuild.client.common.js'
 
 const outdir = '.dev-build/client'
 let isRebuilding = false
 
 const ctx = await context({
-  entryPoints: ['src/client/main.ts'],
-  bundle: true,
-  platform: 'browser',
-  format: 'iife',
-  write: false,
+  outdir,
   minify: false,
   sourcemap: 'inline',
-  outdir,
-  alias: {
-    '@': './src',
-  },
-  loader: {
-    '.css': 'css',
-    '.woff2': 'dataurl',
-    '.woff': 'dataurl',
-    '.ttf': 'dataurl',
-  },
+  ...clientBuildOptions,
   plugins: [
     {
       name: 'rebuild-html',

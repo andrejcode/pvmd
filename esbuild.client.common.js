@@ -1,5 +1,22 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 
+export const clientBuildOptions = {
+  entryPoints: ['src/client/main.ts'],
+  bundle: true,
+  platform: 'browser',
+  format: 'iife',
+  write: false,
+  alias: {
+    '@': './src',
+  },
+  loader: {
+    '.css': 'css',
+    '.woff2': 'dataurl',
+    '.woff': 'dataurl',
+    '.ttf': 'dataurl',
+  },
+}
+
 export async function assembleHTML(result, outdir) {
   const js =
     result.outputFiles.find((file) => file.path.endsWith('.js'))?.text || ''
