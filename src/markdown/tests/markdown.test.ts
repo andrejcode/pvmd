@@ -56,6 +56,15 @@ describe('parseMarkdown', () => {
         '<del>strikethrough text</del>',
       )
     })
+
+    test('should parse emoji shortcodes without remote assets', () => {
+      const result = parseMarkdown('Launch time :rocket: :tada:')
+      expect(result).toContain(
+        '<p>Launch time <g-emoji>🚀</g-emoji> <g-emoji>🎉</g-emoji></p>',
+      )
+      expect(result).not.toContain('<img')
+      expect(result).not.toContain('githubusercontent.com')
+    })
   })
 
   describe('lists', () => {

@@ -31,8 +31,8 @@
     "format:check": "prettier . --check"
   },
   "dependencies": {
-    "@octokit/rest": "^22.0.1",
     "@wooorm/starry-night": "^3.9.0",
+    "gemoji": "^8.1.0",
     "github-markdown-css": "^5.9.0",
     "hast-util-to-html": "^9.0.5",
     "marked": "^17.0.3",

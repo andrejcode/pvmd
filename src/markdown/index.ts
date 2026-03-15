@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { Octokit } from '@octokit/rest'
 import { common, createStarryNight } from '@wooorm/starry-night'
+import { nameToEmoji } from 'gemoji'
 import { toHtml } from 'hast-util-to-html'
 import { marked } from 'marked'
 import markedAlert from 'marked-alert'
@@ -12,14 +12,9 @@ import markedKatex from 'marked-katex-extension'
 import { processFileSystemError } from '@/utils/file-error'
 import { validateFile, validateMarkdownExtension } from './file-validation'
 
-const octokit = new Octokit()
-const res = await octokit.rest.emojis.get()
-const emojis = res.data
-
 const markedEmojiOptions = {
-  emojis,
-  renderer: (token: { name: string; emoji: string }) =>
-    `<g-emoji><img class="emoji" alt="${token.name}" src="${token.emoji}"></g-emoji>`,
+  emojis: nameToEmoji,
+  renderer: (token: { emoji: string }) => `<g-emoji>${token.emoji}</g-emoji>`,
 }
 
 const starryNight = await createStarryNight(common)
