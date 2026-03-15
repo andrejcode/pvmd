@@ -19,6 +19,9 @@ const ctx = await context({
   },
   loader: {
     '.css': 'css',
+    '.woff2': 'dataurl',
+    '.woff': 'dataurl',
+    '.ttf': 'dataurl',
   },
   plugins: [
     {

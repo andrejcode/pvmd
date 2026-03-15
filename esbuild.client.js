@@ -14,6 +14,9 @@ const result = await build({
   },
   loader: {
     '.css': 'css',
+    '.woff2': 'dataurl',
+    '.woff': 'dataurl',
+    '.ttf': 'dataurl',
   },
 })
 
