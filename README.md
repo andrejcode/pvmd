@@ -13,7 +13,6 @@ The project is designed for fast local previewing of Markdown documents while ke
 - [Architecture](#architecture)
 - [Security](#security)
 - [Development](#development)
-- [Security Disclaimer](#security-disclaimer)
 - [License](#license)
 
 ## Features
@@ -24,6 +23,7 @@ The project is designed for fast local previewing of Markdown documents while ke
 - GitHub-flavored Markdown support
 - Syntax highlighting for fenced code blocks
 - Footnotes, alerts, heading anchors, emoji rendering, and KaTeX support
+- Heading anchor support for table-of-contents and `#section` navigation
 - Copy buttons for code blocks
 - Local static image serving for Markdown content
 - Disconnection status alert in the browser when the live update stream is unavailable
@@ -36,39 +36,43 @@ The project is designed for fast local previewing of Markdown documents while ke
 ## Installation
 
 ```bash
-npm install
+npm install -g pvmd
 ```
 
-To build the project:
+Or run it without installing globally:
 
 ```bash
-npm run build
-```
-
-To run it in development:
-
-```bash
-npm run dev
+npx pvmd ./README.md
 ```
 
 ## Usage
-
-After building, run:
 
 ```bash
 pvmd [options] <file>
 ```
 
-Example:
+Preview a Markdown file:
 
 ```bash
 pvmd ./docs/guide.md
 ```
 
-With automatic browser opening and stricter remote-content handling:
+Open the preview automatically in your browser:
+
+```bash
+pvmd --open ./docs/guide.md
+```
+
+Preview with stricter remote-content handling:
 
 ```bash
 pvmd --open --https-only ./docs/guide.md
+```
+
+Disable file watching:
+
+```bash
+pvmd --no-watch ./docs/guide.md
 ```
 
 ## CLI Options
@@ -129,19 +133,33 @@ Key protections include:
 
 This setup allows the project to keep useful GitHub-like Markdown behavior while still applying meaningful browser-side and server-side controls.
 
+You should only preview Markdown that you trust. Even with the available safeguards, review the source of any Markdown file before opening it, especially if it comes from an external or unverified source. When appropriate, enable additional safety-oriented flags such as `--https-only`.
+
 ## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Build the project:
+
+```bash
+npm run build
+```
+
+Run it in development:
+
+```bash
+npm run dev
+```
 
 During development, the client build is written into the `.dev-build` directory. The server-side template loader reads the HTML template from `.dev-build/client/index.html` when `NODE_ENV=development`.
 
 This matters because the browser client is served by the same local HTTP server as the rendered Markdown page. When client code changes, the development client build can be rebuilt in place without requiring the developer to restart `npm run dev`. The application process keeps serving the updated client assets from `.dev-build`, which shortens the edit-refresh loop during frontend work.
 
 In practice, `npm run dev` runs the application process and the client build process together so both sides can evolve during local development.
-
-## Security Disclaimer
-
-This project includes several measures intended to improve safety, including local-only serving, restrictive response headers, and an optional `--https-only` mode for remote links and images. However, Markdown previewing still involves rendering user-provided content in a browser context.
-
-You should only preview Markdown that you trust. Even with the available safeguards, review the source of any Markdown file before opening it, especially if it comes from an external or unverified source. When appropriate, enable additional safety-oriented flags such as `--https-only`.
 
 ## License
 

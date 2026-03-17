@@ -1,20 +1,48 @@
 {
   "name": "pvmd",
-  "version": "0.0.0",
-  "description": "",
+  "version": "0.1.0",
+  "description": "Terminal-launched Markdown previewer that renders in the browser with live reload and GitHub-style rendering.",
   "license": "MIT",
   "author": "Andrej Milanović",
   "type": "module",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "bin": {
     "pvmd": "dist/index.js"
+  },
+  "keywords": [
+    "markdown",
+    "preview",
+    "browser",
+    "cli",
+    "terminal",
+    "live-reload",
+    "github-markdown"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrejcode/pvmd.git"
+  },
+  "homepage": "https://github.com/andrejcode/pvmd#readme",
+  "bugs": {
+    "url": "https://github.com/andrejcode/pvmd/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "dev": "node dev.js",
     "dev:app": "NODE_ENV=development tsx src/index.ts",
     "dev:client": "node esbuild.client.dev.js",
     "clean": "rm -rf dist .dev-build",
-    "build": "npm run clean && npm run build:app && npm run build:client",
+    "build": "npm run build:app && npm run build:client",
     "build:app": "npm run typecheck:app && node esbuild.config.js",
     "build:client": "npm run typecheck:client && node esbuild.client.js",
     "typecheck": "npm run typecheck:app && npm run typecheck:client",
@@ -28,7 +56,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
-    "format:check": "prettier . --check"
+    "format:check": "prettier . --check",
+    "prepack": "npm run clean && npm run build"
   },
   "dependencies": {
     "@wooorm/starry-night": "^3.9.0",
