@@ -36,13 +36,13 @@ The project is designed for fast local previewing of Markdown documents while ke
 ## Installation
 
 ```bash
-npm install -g pvmd
+npm install -g @andrejcode/pvmd
 ```
 
 Or run it without installing globally:
 
 ```bash
-npx pvmd ./README.md
+npx @andrejcode/pvmd ./README.md
 ```
 
 ## Usage
