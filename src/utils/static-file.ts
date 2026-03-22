@@ -3,6 +3,20 @@ import { extname } from 'node:path'
 import { validateFile } from '@/markdown/file-validation'
 import { resolvePath } from './path-validation'
 
+const IMAGE_MIME_TYPES: Readonly<Record<string, string>> = {
+  '.avif': 'image/avif',
+  '.gif': 'image/gif',
+  '.ico': 'image/x-icon',
+  '.jpeg': 'image/jpeg',
+  '.jpg': 'image/jpeg',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.webp': 'image/webp',
+}
+
+const SVG_CONTENT_SECURITY_POLICY =
+  "default-src 'none'; style-src 'unsafe-inline'"
+
 export interface StaticFileResult {
   data: Buffer
   contentType: string
@@ -21,17 +35,7 @@ export function resolveStaticFile(
   baseDir: string,
 ): StaticFileResult {
   const ext = extname(relativePath).toLowerCase()
-  const imageMimeTypes: Record<string, string> = {
-    '.avif': 'image/avif',
-    '.gif': 'image/gif',
-    '.ico': 'image/x-icon',
-    '.jpeg': 'image/jpeg',
-    '.jpg': 'image/jpeg',
-    '.png': 'image/png',
-    '.svg': 'image/svg+xml',
-    '.webp': 'image/webp',
-  }
-  const contentType = imageMimeTypes[ext]
+  const contentType = IMAGE_MIME_TYPES[ext]
 
   if (!contentType) {
     throw new Error(`Unsupported file type: ${ext || '(none)'}`)
@@ -49,8 +53,7 @@ export function resolveStaticFile(
   }
 
   if (ext === '.svg') {
-    headers['content-security-policy'] =
-      "default-src 'none'; style-src 'unsafe-inline'"
+    headers['content-security-policy'] = SVG_CONTENT_SECURITY_POLICY
   }
 
   return { data, contentType, headers }

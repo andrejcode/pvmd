@@ -10,6 +10,18 @@ import { resolveStaticFile } from './utils/static-file'
 
 type RequestHandler = (req: IncomingMessage, res: ServerResponse) => void
 
+const APP_SCRIPT_OUTLET_MARKER = 'data-pvmd-app'
+const APP_SCRIPT_OUTLET_REGEX = new RegExp(
+  `(</main>[\\s\\S]*?)<script\\s+${APP_SCRIPT_OUTLET_MARKER}>`,
+)
+const SECURITY_HEADERS = {
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+  'x-frame-options': 'DENY',
+  'permissions-policy':
+    'geolocation=(), microphone=(), camera=(), payment=(), usb=(), serial=(), bluetooth=()',
+} as const
+
 function generateNonce(): string {
   return randomBytes(16).toString('base64')
 }
@@ -20,11 +32,9 @@ function generateNonce(): string {
  * Scripts in markdown (inside <main>) are never touched.
  */
 function applyNonce(html: string, nonce: string): string {
-  const scriptOutletMarker = 'data-pvmd-app'
-
   return html.replace(
-    new RegExp(`(</main>[\\s\\S]*?)<script\\s+${scriptOutletMarker}>`),
-    `$1<script ${scriptOutletMarker} nonce="${nonce}">`,
+    APP_SCRIPT_OUTLET_REGEX,
+    `$1<script ${APP_SCRIPT_OUTLET_MARKER} nonce="${nonce}">`,
   )
 }
 
@@ -90,18 +100,10 @@ export function createServer(
       const htmlWithNonce = applyNonce(html, nonce)
       const csp = buildCSPHeader(nonce)
 
-      const securityHeaders = {
-        'x-content-type-options': 'nosniff',
-        'referrer-policy': 'no-referrer',
-        'x-frame-options': 'DENY',
-        'permissions-policy':
-          'geolocation=(), microphone=(), camera=(), payment=(), usb=(), serial=(), bluetooth=()',
-      } as const
-
       res.writeHead(200, {
         'content-type': 'text/html',
         'content-security-policy': csp,
-        ...securityHeaders,
+        ...SECURITY_HEADERS,
       })
       res.end(htmlWithNonce)
     } else if (req.method === 'GET' && req.url === '/events' && handleSSE) {

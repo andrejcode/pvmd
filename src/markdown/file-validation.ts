@@ -3,22 +3,23 @@ import { extname } from 'node:path'
 import { config } from '@/cli/config'
 import { processFileSystemError } from '@/utils/file-error'
 
+const VALID_MARKDOWN_EXTENSIONS: readonly string[] = [
+  '.md',
+  '.markdown',
+  '.mdown',
+  '.mkdn',
+  '.mkd',
+  '.mdwn',
+  '.mdtxt',
+  '.mdtext',
+] as const
+
 export function validateMarkdownExtension(path: string): void {
-  const validExtensions = [
-    '.md',
-    '.markdown',
-    '.mdown',
-    '.mkdn',
-    '.mkd',
-    '.mdwn',
-    '.mdtxt',
-    '.mdtext',
-  ]
   const extension = extname(path).toLowerCase()
 
-  if (!validExtensions.includes(extension)) {
+  if (!VALID_MARKDOWN_EXTENSIONS.includes(extension)) {
     throw new Error(
-      `Invalid extension for path: ${path}.\nExpected extensions: ${validExtensions.join(', ')}`,
+      `Invalid extension for path: ${path}.\nExpected extensions: ${VALID_MARKDOWN_EXTENSIONS.join(', ')}`,
     )
   }
 }
