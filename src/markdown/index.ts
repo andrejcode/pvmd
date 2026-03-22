@@ -11,6 +11,7 @@ import { markedHighlight } from 'marked-highlight'
 import markedKatex from 'marked-katex-extension'
 import { processFileSystemError } from '@/utils/file-error'
 import { validateFile, validateMarkdownExtension } from './file-validation'
+import { sanitizeHTML } from './sanitize-html'
 
 const markedEmojiOptions = {
   emojis: nameToEmoji,
@@ -40,10 +41,12 @@ marked.use(
 )
 
 export function parseMarkdown(content: string): string {
-  return marked.parse(
+  const html = marked.parse(
     // eslint-disable-next-line no-misleading-character-class
     content.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, ''),
   ) as string
+
+  return sanitizeHTML(html)
 }
 
 export function readFile(path: string): string {

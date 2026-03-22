@@ -138,6 +138,19 @@ describe('parseMarkdown', () => {
         'title="Image title"',
       )
     })
+
+    test('should strip unsafe javascript links but keep link text', () => {
+      const result = parseMarkdown('[Click me](<javascript:alert(1)>)')
+      expect(result).toContain('<a>Click me</a>')
+      expect(result).not.toContain('javascript:alert')
+    })
+
+    test('should keep safe data image sources', () => {
+      const result = parseMarkdown(
+        '<img src="data:image/png;base64,AAAA" alt="Inline">',
+      )
+      expect(result).toContain('src="data:image/png;base64,AAAA"')
+    })
   })
 
   describe('code', () => {
@@ -266,6 +279,60 @@ const example = 'code block';
       expect(result).toContain('<a href="https://example.com">link</a>')
       expect(result).toContain('<blockquote>')
       expect(result).toContain('<pre><code class="language-javascript">')
+    })
+  })
+
+  describe('raw HTML safety', () => {
+    test('should strip script tags from rendered output', () => {
+      const result = parseMarkdown('<script>alert("xss")</script><p>safe</p>')
+      expect(result).toBe('<p>safe</p>')
+    })
+
+    test('should strip interactive form controls except task list checkboxes', () => {
+      const result = parseMarkdown(
+        '<button>run</button><input type="text"><select><option>one</option></select><textarea>text</textarea>',
+      )
+      expect(result).not.toContain('<button')
+      expect(result).not.toContain('<input')
+      expect(result).not.toContain('<select')
+      expect(result).not.toContain('<option')
+      expect(result).not.toContain('<textarea')
+    })
+
+    test('should strip non-checkbox input elements from raw HTML', () => {
+      const result = parseMarkdown('<input type="text" value="hello">')
+      expect(result).not.toContain('<input')
+    })
+
+    test('should strip event handler attributes from raw HTML', () => {
+      const result = parseMarkdown('<img src="image.jpg" onerror="alert(1)">')
+      expect(result).toContain('<img src="image.jpg">')
+      expect(result).not.toContain('onerror')
+    })
+
+    test('should preserve escaped script text inside fenced code blocks', () => {
+      const result = parseMarkdown('```html\n<script>alert(1)</script>\n```')
+      expect(result).toContain('&lt;')
+      expect(result).toContain('script')
+      expect(result).toContain('alert')
+      expect(result).not.toContain('<script>alert(1)</script>')
+      expect(result).toContain('<pre><code class="language-html">')
+    })
+
+    test('should preserve useful raw HTML elements', () => {
+      const result = parseMarkdown(
+        '<div style="color: red"><details><summary>Title</summary><kbd>Ctrl</kbd></details></div>',
+      )
+      expect(result).toContain('<div style="color: red">')
+      expect(result).toContain(
+        '<details><summary>Title</summary><kbd>Ctrl</kbd></details>',
+      )
+    })
+
+    test('should preserve markdown task list checkboxes', () => {
+      const result = parseMarkdown('- [x] done\n- [ ] todo')
+      expect(result).toContain('type="checkbox"')
+      expect(result).toContain('disabled')
     })
   })
 })

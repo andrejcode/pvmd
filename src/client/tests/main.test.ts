@@ -59,6 +59,37 @@ describe('main', () => {
 
       expect(markdownContent?.innerHTML).toBe(testHtml)
     })
+
+    test('should disable rendered interactive controls', async () => {
+      await loadMain()
+
+      sendMarkdown(
+        '<button>Click</button><input type="checkbox"><input type="text"><select><option>One</option></select><textarea>hello</textarea>',
+      )
+
+      const button = document.querySelector<HTMLButtonElement>(
+        '#markdown-content button',
+      )
+      const checkbox = document.querySelector<HTMLInputElement>(
+        '#markdown-content input[type="checkbox"]',
+      )
+      const textInput = document.querySelector<HTMLInputElement>(
+        '#markdown-content input[type="text"]',
+      )
+      const select = document.querySelector<HTMLSelectElement>(
+        '#markdown-content select',
+      )
+      const textarea = document.querySelector<HTMLTextAreaElement>(
+        '#markdown-content textarea',
+      )
+
+      expect(button?.getAttribute('aria-disabled')).toBe('true')
+      expect(button?.getAttribute('tabindex')).toBe('-1')
+      expect(checkbox?.disabled).toBe(true)
+      expect(textInput?.disabled).toBe(true)
+      expect(select?.disabled).toBe(true)
+      expect(textarea?.disabled).toBe(true)
+    })
   })
 
   describe('copy buttons', () => {
@@ -134,6 +165,24 @@ describe('main', () => {
         '<pre><code>second</code></pre><pre><code>third</code></pre>',
       )
       expect(document.querySelectorAll('.copy-button')).toHaveLength(2)
+    })
+
+    test('should keep copy buttons enabled', async () => {
+      await loadMain()
+
+      sendMarkdown(
+        '<pre><code>console.log("hi")</code></pre><button>Other</button>',
+      )
+
+      const copyButton =
+        document.querySelector<HTMLButtonElement>('.copy-button')
+      const otherButton = document.querySelector<HTMLButtonElement>(
+        '#markdown-content button:not(.copy-button)',
+      )
+
+      expect(copyButton?.disabled).toBe(false)
+      expect(copyButton?.getAttribute('aria-disabled')).toBeNull()
+      expect(otherButton?.disabled).toBe(true)
     })
   })
 

@@ -121,6 +121,7 @@ Rather than removing the richer GitHub-style rendering capabilities, the project
 Key protections include:
 
 - Local-only HTTP serving on `127.0.0.1`
+- Render-time stripping of active HTML content such as `<script>` tags, inline event handlers, and unsafe URL schemes
 - Content Security Policy with per-response script nonces
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: no-referrer`

@@ -53,6 +53,32 @@ function addCopyButtons() {
   }
 }
 
+function disableInteractiveContent() {
+  if (!markdownContent) return
+
+  const controls = markdownContent.querySelectorAll<HTMLElement>(
+    'button, input, select, textarea',
+  )
+
+  for (const control of controls) {
+    if (control.classList.contains('copy-button')) {
+      continue
+    }
+
+    if (
+      control instanceof HTMLButtonElement ||
+      control instanceof HTMLInputElement ||
+      control instanceof HTMLSelectElement ||
+      control instanceof HTMLTextAreaElement
+    ) {
+      control.disabled = true
+    }
+
+    control.setAttribute('aria-disabled', 'true')
+    control.setAttribute('tabindex', '-1')
+  }
+}
+
 function blockInsecureContent() {
   if (!httpsOnly || !markdownContent) return
 
@@ -101,6 +127,7 @@ eventSource.onmessage = (event) => {
   if (markdownContent && typeof event.data === 'string') {
     markdownContent.innerHTML = JSON.parse(event.data) as string
     addCopyButtons()
+    disableInteractiveContent()
     openExternalLinksInNewTab()
     blockInsecureContent()
   }
@@ -113,5 +140,6 @@ if (closeAlertButton) {
 }
 
 addCopyButtons()
+disableInteractiveContent()
 openExternalLinksInNewTab()
 blockInsecureContent()
