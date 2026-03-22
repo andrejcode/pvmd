@@ -17,10 +17,16 @@ const HTML_WITH_APP_SCRIPT = [
   '<script data-pvmd-app></script>',
   '</body></html>',
 ].join('\n')
+const HOST = '127.0.0.1'
+const ROOT_PATH = '/'
+
+function getServerUrl(port: number, path = ROOT_PATH) {
+  return `http://${HOST}:${port}${path}`
+}
 
 function listenOnRandomPort(server: Server): Promise<number> {
   return new Promise((resolve, reject) => {
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(0, HOST, () => {
       const address = server.address()
       const port =
         typeof address === 'object' && address !== null && 'port' in address
@@ -33,13 +39,26 @@ function listenOnRandomPort(server: Server): Promise<number> {
   })
 }
 
+async function withTestServer(
+  run: (
+    request: (path: string, init?: RequestInit) => Promise<Response>,
+  ) => Promise<void>,
+  baseDir?: string,
+) {
+  const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, baseDir)
+  const port = await listenOnRandomPort(server)
+
+  try {
+    await run((path, init) => fetch(getServerUrl(port, path), init))
+  } finally {
+    server.close()
+  }
+}
+
 describe('createServer', () => {
   test('GET / returns 200 with security headers, CSP with nonce, and matching nonce in HTML', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/`)
+    await withTestServer(async (request) => {
+      const res = await request(ROOT_PATH)
       expect(res.status).toBe(200)
       expect(res.headers.get('content-type')).toBe('text/html')
 
@@ -60,17 +79,12 @@ describe('createServer', () => {
       expect(body).toContain(`nonce="${nonce}"`)
       expect(body).toContain('data-pvmd-app')
       expect(body).toContain('<main><p>content</p></main>')
-    } finally {
-      server.close()
-    }
+    })
   })
 
   test('unhandled path returns 404 with JSON body', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/some-path`)
+    await withTestServer(async (request) => {
+      const res = await request('/some-path')
       expect(res.status).toBe(404)
       expect(res.headers.get('content-type')).toBe('application/json')
 
@@ -79,85 +93,66 @@ describe('createServer', () => {
         error: 'Not Found',
         message: 'Cannot GET /some-path',
       })
-    } finally {
-      server.close()
-    }
+    })
   })
 
   test('GET / with httpsOnly restricts img-src to https: in CSP', async () => {
     config.httpsOnly = true
-    const server = createServer(() => HTML_WITH_APP_SCRIPT)
-    const port = await listenOnRandomPort(server)
 
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/`)
-      const csp = res.headers.get('content-security-policy')
-      expect(csp).toContain("img-src 'self' https: data:")
-      expect(csp).not.toContain('img-src *')
+      await withTestServer(async (request) => {
+        const res = await request(ROOT_PATH)
+        const csp = res.headers.get('content-security-policy')
+        expect(csp).toContain("img-src 'self' https: data:")
+        expect(csp).not.toContain('img-src *')
+      })
     } finally {
       config.httpsOnly = false
-      server.close()
     }
   })
 
   test('GET / with httpsOnly injects data-https-only on body', async () => {
     config.httpsOnly = true
-    const server = createServer(() => HTML_WITH_APP_SCRIPT)
-    const port = await listenOnRandomPort(server)
 
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/`)
-      const body = await res.text()
-      expect(body).toContain('data-https-only')
+      await withTestServer(async (request) => {
+        const res = await request(ROOT_PATH)
+        const body = await res.text()
+        expect(body).toContain('data-https-only')
+      })
     } finally {
       config.httpsOnly = false
-      server.close()
     }
   })
 
   test('GET / without httpsOnly allows all img-src in CSP', async () => {
     config.httpsOnly = false
-    const server = createServer(() => HTML_WITH_APP_SCRIPT)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/`)
+    await withTestServer(async (request) => {
+      const res = await request(ROOT_PATH)
       const csp = res.headers.get('content-security-policy')
       expect(csp).toContain('img-src * data:')
-    } finally {
-      server.close()
-    }
+    })
   })
 
   test('GET / without httpsOnly does not inject data-https-only', async () => {
     config.httpsOnly = false
-    const server = createServer(() => HTML_WITH_APP_SCRIPT)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/`)
+    await withTestServer(async (request) => {
+      const res = await request(ROOT_PATH)
       const body = await res.text()
       expect(body).not.toContain('data-https-only')
-    } finally {
-      server.close()
-    }
+    })
   })
 
   test('POST / returns 404', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/`, {
+    await withTestServer(async (request) => {
+      const res = await request(ROOT_PATH, {
         method: 'POST',
       })
       expect(res.status).toBe(404)
 
       const json = (await res.json()) as { message: string }
       expect(json.message).toBe('Cannot POST /')
-    } finally {
-      server.close()
-    }
+    })
   })
 })
 
@@ -190,7 +185,7 @@ describe('startServer', () => {
     })
 
     await vi.waitFor(() => {
-      expect(open).toHaveBeenCalledWith(`http://127.0.0.1:${config.port}/`)
+      expect(open).toHaveBeenCalledWith(getServerUrl(config.port))
     })
 
     server.close()
@@ -233,11 +228,8 @@ describe('static file serving', () => {
   })
 
   test('serves image file with correct content-type and body', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/photo.png`)
+    await withTestServer(async (request) => {
+      const res = await request('/photo.png')
       expect(res.status).toBe(200)
       expect(res.headers.get('content-type')).toBe('image/png')
       expect(res.headers.get('cache-control')).toBe('no-cache')
@@ -245,113 +237,69 @@ describe('static file serving', () => {
 
       const body = Buffer.from(await res.arrayBuffer())
       expect(body).toEqual(pngContent)
-    } finally {
-      server.close()
-    }
+    }, tmpDir)
   })
 
   test('serves files from nested directories', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/sub/nested.jpg`)
+    await withTestServer(async (request) => {
+      const res = await request('/sub/nested.jpg')
       expect(res.status).toBe(200)
       expect(res.headers.get('content-type')).toBe('image/jpeg')
-    } finally {
-      server.close()
-    }
+    }, tmpDir)
   })
 
   test('SVG response includes restrictive CSP header', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/icon.svg`)
+    await withTestServer(async (request) => {
+      const res = await request('/icon.svg')
       expect(res.status).toBe(200)
       expect(res.headers.get('content-type')).toBe('image/svg+xml')
       expect(res.headers.get('content-security-policy')).toBe(
         "default-src 'none'; style-src 'unsafe-inline'",
       )
-    } finally {
-      server.close()
-    }
+    }, tmpDir)
   })
 
   test('returns 404 for non-image file extensions', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/script.js`)
+    await withTestServer(async (request) => {
+      const res = await request('/script.js')
       expect(res.status).toBe(404)
-    } finally {
-      server.close()
-    }
+    }, tmpDir)
   })
 
   test('returns 404 for non-existent image files', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/missing.png`)
+    await withTestServer(async (request) => {
+      const res = await request('/missing.png')
       expect(res.status).toBe(404)
-    } finally {
-      server.close()
-    }
+    }, tmpDir)
   })
 
   test('returns 404 for path traversal attempts', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/../../etc/passwd.png`)
+    await withTestServer(async (request) => {
+      const res = await request('/../../etc/passwd.png')
       expect(res.status).toBe(404)
-    } finally {
-      server.close()
-    }
+    }, tmpDir)
   })
 
   test('returns 404 for URL-encoded path traversal attempts', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(
-        `http://127.0.0.1:${port}/%2e%2e/%2e%2e/etc/passwd.png`,
-      )
+    await withTestServer(async (request) => {
+      const res = await request('/%2e%2e/%2e%2e/etc/passwd.png')
       expect(res.status).toBe(404)
-    } finally {
-      server.close()
-    }
+    }, tmpDir)
   })
 
   test('strips query strings before resolving files', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, tmpDir)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/photo.png?v=123`)
+    await withTestServer(async (request) => {
+      const res = await request('/photo.png?v=123')
       expect(res.status).toBe(200)
       expect(res.headers.get('content-type')).toBe('image/png')
-    } finally {
-      server.close()
-    }
+    }, tmpDir)
   })
 
   test('without baseDir, unknown paths still return 404', async () => {
-    const server = createServer(() => HTML_WITH_APP_SCRIPT)
-    const port = await listenOnRandomPort(server)
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/photo.png`)
+    await withTestServer(async (request) => {
+      const res = await request('/photo.png')
       expect(res.status).toBe(404)
       expect(res.headers.get('content-type')).toBe('application/json')
-    } finally {
-      server.close()
-    }
+    })
   })
 })

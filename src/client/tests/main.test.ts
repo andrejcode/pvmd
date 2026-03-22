@@ -1,13 +1,5 @@
 describe('main', () => {
-  let mockEventSource: {
-    onopen: (() => void) | null
-    onerror: (() => void) | null
-    onmessage: ((event: MessageEvent) => void) | null
-  }
-  let mockWriteText: ReturnType<typeof vi.fn<() => Promise<void>>>
-
-  beforeEach(() => {
-    document.body.innerHTML = `
+  const INITIAL_BODY_HTML = `
       <div id="disconnected-alert" hidden>
         <span id="alert-message">Connection lost. Waiting to reconnect...</span>
         <button id="alert-close" aria-label="Close alert"></button>
@@ -15,6 +7,27 @@ describe('main', () => {
       <main id="markdown-content" role="article" aria-live="polite" aria-atomic="false" aria-label="Markdown content"></main>
       <template id="icon-copy"><svg data-testid="copy-icon"></svg></template>
     `
+  let mockEventSource: {
+    onopen: (() => void) | null
+    onerror: (() => void) | null
+    onmessage: ((event: MessageEvent) => void) | null
+  }
+  let mockWriteText: ReturnType<typeof vi.fn<() => Promise<void>>>
+
+  async function loadMain() {
+    await import('../main')
+  }
+
+  function sendMarkdown(html: string) {
+    if (mockEventSource.onmessage) {
+      mockEventSource.onmessage(
+        new MessageEvent('message', { data: JSON.stringify(html) }),
+      )
+    }
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = INITIAL_BODY_HTML
 
     mockWriteText = vi.fn(() => Promise.resolve())
     Object.assign(navigator, {
@@ -37,33 +50,20 @@ describe('main', () => {
 
   describe('markdown content', () => {
     test('should update markdown content on message', async () => {
-      await import('../main')
+      await loadMain()
 
       const markdownContent = document.getElementById('markdown-content')
       const testHtml = '<h1>Test Content</h1>'
 
-      if (mockEventSource.onmessage) {
-        const mockEvent = new MessageEvent('message', {
-          data: JSON.stringify(testHtml),
-        })
-        mockEventSource.onmessage(mockEvent)
-      }
+      sendMarkdown(testHtml)
 
       expect(markdownContent?.innerHTML).toBe(testHtml)
     })
   })
 
   describe('copy buttons', () => {
-    function sendMarkdown(html: string) {
-      if (mockEventSource.onmessage) {
-        mockEventSource.onmessage(
-          new MessageEvent('message', { data: JSON.stringify(html) }),
-        )
-      }
-    }
-
     test('should add a copy button to each code block', async () => {
-      await import('../main')
+      await loadMain()
 
       sendMarkdown(
         '<pre><code>const a = 1</code></pre><pre><code>const b = 2</code></pre>',
@@ -77,7 +77,7 @@ describe('main', () => {
     })
 
     test('should not add copy buttons when there are no code blocks', async () => {
-      await import('../main')
+      await loadMain()
 
       sendMarkdown('<p>No code here</p>')
 
@@ -85,7 +85,7 @@ describe('main', () => {
     })
 
     test('should clone the icon template into each button', async () => {
-      await import('../main')
+      await loadMain()
 
       sendMarkdown('<pre><code>hello</code></pre>')
 
@@ -95,7 +95,7 @@ describe('main', () => {
     })
 
     test('should copy code text to clipboard on click', async () => {
-      await import('../main')
+      await loadMain()
 
       sendMarkdown('<pre><code>console.log("hi")</code></pre>')
 
@@ -107,7 +107,7 @@ describe('main', () => {
 
     test('should add and remove the "copied" class as feedback', async () => {
       vi.useFakeTimers()
-      await import('../main')
+      await loadMain()
 
       sendMarkdown('<pre><code>x</code></pre>')
 
@@ -125,7 +125,7 @@ describe('main', () => {
     })
 
     test('should replace old copy buttons when content updates', async () => {
-      await import('../main')
+      await loadMain()
 
       sendMarkdown('<pre><code>first</code></pre>')
       expect(document.querySelectorAll('.copy-button')).toHaveLength(1)
@@ -138,17 +138,9 @@ describe('main', () => {
   })
 
   describe('https-only mode', () => {
-    function sendMarkdown(html: string) {
-      if (mockEventSource.onmessage) {
-        mockEventSource.onmessage(
-          new MessageEvent('message', { data: JSON.stringify(html) }),
-        )
-      }
-    }
-
     test('should block http:// links when data-https-only is set', async () => {
       document.body.setAttribute('data-https-only', '')
-      await import('../main')
+      await loadMain()
 
       sendMarkdown(
         '<a href="http://example.com">HTTP Link</a><a href="https://example.com">HTTPS Link</a>',
@@ -165,7 +157,7 @@ describe('main', () => {
 
     test('should add target=_blank and rel=noopener noreferrer to all external links', async () => {
       document.body.setAttribute('data-https-only', '')
-      await import('../main')
+      await loadMain()
 
       sendMarkdown(
         '<a href="https://example.com">HTTPS</a><a href="http://example.com">HTTP</a>',
@@ -183,7 +175,7 @@ describe('main', () => {
 
     test('should not add target=_blank to relative links', async () => {
       document.body.setAttribute('data-https-only', '')
-      await import('../main')
+      await loadMain()
 
       sendMarkdown(
         '<a href="#heading">Anchor</a><a href="./other.md">Relative</a>',
@@ -197,7 +189,7 @@ describe('main', () => {
 
     test('should remove http:// images', async () => {
       document.body.setAttribute('data-https-only', '')
-      await import('../main')
+      await loadMain()
 
       sendMarkdown(
         '<img src="http://example.com/img.png"><img src="https://example.com/img.png">',
@@ -210,7 +202,7 @@ describe('main', () => {
 
     test('should not block http links when data-https-only is not set', async () => {
       document.body.removeAttribute('data-https-only')
-      await import('../main')
+      await loadMain()
 
       sendMarkdown(
         '<a href="http://example.com">HTTP</a><a href="https://example.com">HTTPS</a>',
@@ -223,7 +215,7 @@ describe('main', () => {
 
     test('should still secure external links when data-https-only is not set', async () => {
       document.body.removeAttribute('data-https-only')
-      await import('../main')
+      await loadMain()
 
       sendMarkdown(
         '<a href="http://example.com">HTTP</a><a href="https://example.com">HTTPS</a>',
@@ -239,7 +231,7 @@ describe('main', () => {
 
   describe('disconnected alert', () => {
     test('should be hidden initially', async () => {
-      await import('../main')
+      await loadMain()
 
       const alert = document.getElementById('disconnected-alert')
       expect(alert).toBeTruthy()
@@ -247,7 +239,7 @@ describe('main', () => {
     })
 
     test('should appear when connection is lost (onerror)', async () => {
-      await import('../main')
+      await loadMain()
 
       const alert = document.getElementById('disconnected-alert')
       expect(alert?.hidden).toBe(true)
@@ -260,7 +252,7 @@ describe('main', () => {
     })
 
     test('should disappear when client reconnects (onopen)', async () => {
-      await import('../main')
+      await loadMain()
 
       const alert = document.getElementById('disconnected-alert')
 
@@ -277,7 +269,7 @@ describe('main', () => {
     })
 
     test('should hide alert when close button is clicked', async () => {
-      await import('../main')
+      await loadMain()
 
       const alert = document.getElementById('disconnected-alert')
       const closeButton = document.getElementById('alert-close')

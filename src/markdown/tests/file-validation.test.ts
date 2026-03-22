@@ -4,25 +4,31 @@ import { validateMarkdownExtension, validateFile } from '../file-validation'
 
 vi.mock('node:fs')
 
-describe('validateMarkdownExtension', () => {
-  const validExtensions = [
-    '.md',
-    '.markdown',
-    '.mdown',
-    '.mkdn',
-    '.mkd',
-    '.mdwn',
-    '.mdtxt',
-    '.mdtext',
-  ]
+const VALID_MARKDOWN_EXTENSIONS = [
+  '.md',
+  '.markdown',
+  '.mdown',
+  '.mkdn',
+  '.mkd',
+  '.mdwn',
+  '.mdtxt',
+  '.mdtext',
+]
+const DEFAULT_MAX_FILE_SIZE_MB = 2
 
+function resetFileValidationConfig() {
+  config.skipSizeCheck = false
+  config.maxFileSizeMB = DEFAULT_MAX_FILE_SIZE_MB
+}
+
+describe('validateMarkdownExtension', () => {
   test('should throw an error if extension is not a markdown file', () => {
     expect(() => validateMarkdownExtension('test.js')).toThrow(
-      `Invalid extension for path: test.js.\nExpected extensions: ${validExtensions.join(', ')}`,
+      `Invalid extension for path: test.js.\nExpected extensions: ${VALID_MARKDOWN_EXTENSIONS.join(', ')}`,
     )
   })
 
-  test.each(validExtensions)(
+  test.each(VALID_MARKDOWN_EXTENSIONS)(
     'should not throw an error if extension is a markdown file',
     (extension) => {
       expect(() => validateMarkdownExtension(`test${extension}`)).not.toThrow()
@@ -55,13 +61,11 @@ describe('validateFile', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    config.skipSizeCheck = false
-    config.maxFileSizeMB = 2
+    resetFileValidationConfig()
   })
 
   afterEach(() => {
-    config.skipSizeCheck = false
-    config.maxFileSizeMB = 2
+    resetFileValidationConfig()
   })
 
   test('should throw an error if path is a directory', () => {

@@ -9,6 +9,31 @@ vi.mock('@/markdown/file-validation')
 
 const BASE_DIR = '/project'
 const FAKE_DATA = Buffer.from('fake image data')
+const SUPPORTED_EXTENSIONS = [
+  ['.avif', 'image/avif'],
+  ['.gif', 'image/gif'],
+  ['.ico', 'image/x-icon'],
+  ['.jpeg', 'image/jpeg'],
+  ['.jpg', 'image/jpeg'],
+  ['.png', 'image/png'],
+  ['.svg', 'image/svg+xml'],
+  ['.webp', 'image/webp'],
+] as const
+const NON_SVG_SUPPORTED_EXTENSIONS = SUPPORTED_EXTENSIONS.filter(
+  ([ext]) => ext !== '.svg',
+).map(([ext]) => ext)
+const UNSUPPORTED_EXTENSIONS = [
+  '.js',
+  '.html',
+  '.css',
+  '.txt',
+  '.md',
+  '.json',
+  '.ts',
+  '.exe',
+  '.sh',
+  '.env',
+]
 
 describe('resolveStaticFile', () => {
   beforeEach(() => {
@@ -20,18 +45,7 @@ describe('resolveStaticFile', () => {
     vi.mocked(fs.readFileSync).mockReturnValue(FAKE_DATA)
   })
 
-  const supportedExtensions = [
-    ['.avif', 'image/avif'],
-    ['.gif', 'image/gif'],
-    ['.ico', 'image/x-icon'],
-    ['.jpeg', 'image/jpeg'],
-    ['.jpg', 'image/jpeg'],
-    ['.png', 'image/png'],
-    ['.svg', 'image/svg+xml'],
-    ['.webp', 'image/webp'],
-  ] as const
-
-  test.each(supportedExtensions)(
+  test.each(SUPPORTED_EXTENSIONS)(
     'should accept %s and return content-type %s',
     (ext, expectedMime) => {
       const result = resolveStaticFile(`image${ext}`, BASE_DIR)
@@ -40,20 +54,7 @@ describe('resolveStaticFile', () => {
     },
   )
 
-  const unsupportedExtensions = [
-    '.js',
-    '.html',
-    '.css',
-    '.txt',
-    '.md',
-    '.json',
-    '.ts',
-    '.exe',
-    '.sh',
-    '.env',
-  ]
-
-  test.each(unsupportedExtensions)('should reject %s extension', (ext) => {
+  test.each(UNSUPPORTED_EXTENSIONS)('should reject %s extension', (ext) => {
     expect(() => resolveStaticFile(`file${ext}`, BASE_DIR)).toThrow(
       `Unsupported file type: ${ext}`,
     )
@@ -101,15 +102,7 @@ describe('resolveStaticFile', () => {
   })
 
   test('should not include CSP header for non-SVG images', () => {
-    for (const ext of [
-      '.png',
-      '.jpg',
-      '.jpeg',
-      '.gif',
-      '.webp',
-      '.avif',
-      '.ico',
-    ]) {
+    for (const ext of NON_SVG_SUPPORTED_EXTENSIONS) {
       const result = resolveStaticFile(`image${ext}`, BASE_DIR)
       expect(result.headers['content-security-policy']).toBeUndefined()
     }
