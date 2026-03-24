@@ -5,7 +5,7 @@ import {
   LIVE_BLOCK_ATTRIBUTE,
   type LiveUpdateMessage,
   type LiveUpdateOperation,
-} from '@/live-update'
+} from '@/shared/live-update'
 
 const eventSource = new EventSource('/events')
 const markdownContent = document.getElementById('markdown-content')
@@ -139,6 +139,8 @@ function applyPatch(ops: LiveUpdateOperation[]) {
     return
   }
 
+  // Apply each operation directly against the existing block wrappers so
+  // untouched markdown sections stay mounted in the DOM.
   for (const op of ops) {
     if (op.type === 'remove') {
       markdownContent

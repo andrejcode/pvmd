@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { MockInstance } from 'vitest'
-import createWatcher from '../watcher'
+import createWatcher from '..'
 
 // Mirrors the function-scoped debounceMs in createWatcher.
 const WATCH_DEBOUNCE_MS = 200
@@ -18,7 +18,7 @@ vi.mock('node:fs', () => ({
   readFileSync: readFileSyncMock,
 }))
 
-vi.mock('../markdown', () => ({
+vi.mock('../../markdown', () => ({
   renderMarkdownDocument: renderMarkdownDocumentMock,
 }))
 

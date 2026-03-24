@@ -19,6 +19,7 @@ The project is designed for fast local previewing of Markdown documents while ke
 
 - Local preview of Markdown files in the browser
 - Live reload when the source file changes
+- Block-level live updates that patch only the changed markdown sections in the browser
 - Multi-client update delivery over Server-Sent Events
 - GitHub-flavored Markdown support
 - Syntax highlighting for fenced code blocks
@@ -92,15 +93,15 @@ pvmd --no-watch ./docs/guide.md
 
 1. `pvmd` resolves and validates the Markdown file path.
 2. The file is checked before reading: path resolution blocks traversal, the extension must be a supported Markdown extension, and the target must be a regular file within the allowed size limit.
-3. The file is parsed into HTML using `marked` and related extensions for GitHub-style authoring features such as alerts, footnotes, heading IDs, syntax highlighting, emoji rendering, and KaTeX.
+3. The file is rendered to HTML with `marked`, the project's Markdown extensions, syntax-highlighted code blocks, and server-side sanitization, then wrapped into top-level DOM blocks for incremental updates.
 4. A local server serves the rendered page on `127.0.0.1` and injects the parsed HTML into the client template.
-5. When watch mode is enabled, file changes are pushed to connected browsers through Server-Sent Events.
+5. When watch mode is enabled, file changes are pushed to connected browsers through Server-Sent Events as either full document payloads or block patch operations.
 
 ### Live Update Model
 
 `pvmd` uses Server-Sent Events for one-way update delivery from the local server to the browser. This matches the preview use case well: the browser only needs to receive rendered HTML updates when the source Markdown file changes.
 
-The server can keep multiple browser clients connected at the same time. When the watched file changes, each active client receives the new rendered content. If the event stream disconnects, the browser client shows a visible status alert so the user knows live updates are no longer being received.
+The server can keep multiple browser clients connected at the same time. When the watched file changes, each active client receives either a full initial render or a block-level patch message that inserts and removes only the changed sections. This reduces HTML transfer size, preserves untouched DOM nodes in the browser, and reruns client-side enhancements only for the affected blocks. If the event stream disconnects, the browser client shows a visible status alert so the user knows live updates are no longer being received.
 
 ### Static Local Files
 

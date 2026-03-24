@@ -1,5 +1,15 @@
 export const LIVE_BLOCK_ATTRIBUTE = 'data-pvmd-block-id'
 
+export interface LiveUpdateBlock {
+  id: string
+  html: string
+}
+
+export interface LiveUpdateDocument {
+  blocks: LiveUpdateBlock[]
+  html: string
+}
+
 export type LiveUpdateOperation =
   | {
       type: 'insert'

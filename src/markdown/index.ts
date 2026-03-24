@@ -3,11 +3,14 @@ import { common, createStarryNight } from '@wooorm/starry-night'
 import { toHtml } from 'hast-util-to-html'
 import { marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
+import {
+  LIVE_BLOCK_ATTRIBUTE,
+  type LiveUpdateBlock,
+  type LiveUpdateDocument,
+} from '@/shared/live-update'
 import { processFileSystemError } from '@/utils/file-error'
 import { validateFile, validateMarkdownExtension } from './file-validation'
 import { sanitizeHTML } from './sanitize-html'
-
-const LIVE_BLOCK_ATTRIBUTE = 'data-pvmd-block-id'
 
 const starryNight = await createStarryNight(common)
 
@@ -28,27 +31,17 @@ marked.use(
 
 type MarkdownToken = ReturnType<typeof marked.lexer>[number]
 
-export interface MarkdownBlock {
-  id: string
-  html: string
-}
-
-export interface MarkdownDocument {
-  blocks: MarkdownBlock[]
-  html: string
-}
-
 export function parseMarkdown(content: string): string {
   const html = marked.parse(normalizeMarkdownContent(content)) as string
 
   return sanitizeHTML(html)
 }
 
-export function renderMarkdownDocument(content: string): MarkdownDocument {
+export function renderMarkdownDocument(content: string): LiveUpdateDocument {
   const tokens = marked.lexer(normalizeMarkdownContent(content))
   const blockOccurrences = new Map<string, number>()
 
-  const blocks = tokens.map((token) => {
+  const blocks: LiveUpdateBlock[] = tokens.map((token) => {
     const key = getBlockKey(token)
     const occurrence = (blockOccurrences.get(key) ?? 0) + 1
     blockOccurrences.set(key, occurrence)

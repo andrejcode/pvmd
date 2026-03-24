@@ -1,107 +1,13 @@
-import { watch, readFileSync } from 'node:fs'
-import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { LiveUpdateMessage, LiveUpdateOperation } from './live-update'
-import { renderMarkdownDocument, type MarkdownDocument } from './markdown'
-import { processFileSystemError } from './utils/file-error'
+import {
+  LIVE_BLOCK_ATTRIBUTE,
+  type LiveUpdateDocument,
+  type LiveUpdateMessage,
+  type LiveUpdateOperation,
+} from '@/shared/live-update'
 
-export default function createWatcher(path: string) {
-  const debounceMs = 200
-  const clients = new Set<ServerResponse>()
-  let reloadTimer: ReturnType<typeof setTimeout> | null = null
-  let previousDocument: MarkdownDocument | null = null
-
-  function cancelScheduledReload() {
-    if (!reloadTimer) {
-      return
-    }
-
-    clearTimeout(reloadTimer)
-    reloadTimer = null
-  }
-
-  function broadcastUpdate() {
-    if (clients.size === 0) {
-      return
-    }
-
-    try {
-      const content = readFileSync(path, 'utf-8')
-      const nextDocument = renderMarkdownDocument(content)
-      const message = createLiveUpdateMessage(previousDocument, nextDocument)
-
-      previousDocument = nextDocument
-
-      if (!message) {
-        return
-      }
-
-      const data = `data: ${JSON.stringify(message)}\n\n`
-
-      for (const client of clients) {
-        if (!client.writableEnded) {
-          client.write(data)
-        }
-      }
-    } catch (error) {
-      throw new Error(processFileSystemError(error, path))
-    }
-  }
-
-  function scheduleReload() {
-    if (clients.size === 0) {
-      return
-    }
-
-    cancelScheduledReload()
-    reloadTimer = setTimeout(() => {
-      reloadTimer = null
-      broadcastUpdate()
-    }, debounceMs)
-  }
-
-  function handleSSE(_req: IncomingMessage, res: ServerResponse) {
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    })
-
-    clients.add(res)
-
-    res.on('close', () => {
-      clients.delete(res)
-    })
-  }
-
-  const watcher = watch(path, (event) => {
-    if (event === 'rename') {
-      console.error(`File ${path} was renamed or deleted. Exiting.`)
-      cancelScheduledReload()
-      watcher.close()
-      process.exit(1)
-    }
-
-    scheduleReload()
-  })
-
-  return {
-    handleSSE,
-    cleanup: () => {
-      cancelScheduledReload()
-      watcher.close()
-      for (const client of clients) {
-        if (!client.writableEnded) {
-          client.end()
-        }
-      }
-      clients.clear()
-    },
-  }
-}
-
-function createLiveUpdateMessage(
-  previousDocument: MarkdownDocument | null,
-  nextDocument: MarkdownDocument,
+export function createLiveUpdateMessage(
+  previousDocument: LiveUpdateDocument | null,
+  nextDocument: LiveUpdateDocument,
 ): LiveUpdateMessage | null {
   if (!previousDocument) {
     return {
@@ -121,9 +27,11 @@ function createLiveUpdateMessage(
   }
 }
 
+// Diff the old and new block sequences around their shared backbone so we only
+// emit insert/remove operations for the gaps between unchanged blocks.
 function diffDocuments(
-  previousDocument: MarkdownDocument,
-  nextDocument: MarkdownDocument,
+  previousDocument: LiveUpdateDocument,
+  nextDocument: LiveUpdateDocument,
 ): LiveUpdateOperation[] {
   const previousIds = previousDocument.blocks.map((block) => block.id)
   const nextIds = nextDocument.blocks.map((block) => block.id)
@@ -163,6 +71,9 @@ function diffDocuments(
   return ops
 }
 
+// Build the standard dynamic-programming matrix for longest common subsequence
+// so later blocks can stay mounted even when content is inserted or removed
+// earlier in the document.
 function findLongestCommonSubsequence(
   previousIds: string[],
   nextIds: string[],
@@ -215,7 +126,7 @@ function findLongestCommonSubsequence(
 }
 
 function wrapBlockForInsertion(
-  block: MarkdownDocument['blocks'][number],
+  block: LiveUpdateDocument['blocks'][number],
 ): string {
-  return `<div data-pvmd-block-id="${block.id}">${block.html}</div>`
+  return `<div ${LIVE_BLOCK_ATTRIBUTE}="${block.id}">${block.html}</div>`
 }
