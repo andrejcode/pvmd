@@ -1,7 +1,7 @@
 import type { Server } from 'node:http'
 import { dirname } from 'node:path'
 import { config } from './cli/config'
-import { parseMarkdown, readMarkdownFile } from './markdown'
+import { readMarkdownFile, renderMarkdownDocument } from './markdown'
 import { createServer, startServer } from './server'
 import { prepareHTML } from './template'
 import { resolvePath } from './utils/path-validation'
@@ -30,8 +30,8 @@ export function run(userPath: string) {
 
   const getHTML = () => {
     const markdownContent = readMarkdownFile(fullPath)
-    const parsedMarkdown = parseMarkdown(markdownContent)
-    return prepareHTML(fullPath, parsedMarkdown)
+    const renderedMarkdown = renderMarkdownDocument(markdownContent)
+    return prepareHTML(fullPath, renderedMarkdown.html)
   }
 
   const server = createServer(getHTML, watcher?.handleSSE, dirname(fullPath))

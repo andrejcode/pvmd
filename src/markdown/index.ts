@@ -1,22 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { common, createStarryNight } from '@wooorm/starry-night'
-import { nameToEmoji } from 'gemoji'
 import { toHtml } from 'hast-util-to-html'
 import { marked } from 'marked'
-import markedAlert from 'marked-alert'
-import { markedEmoji } from 'marked-emoji'
-import markedFootnote from 'marked-footnote'
-import { gfmHeadingId } from 'marked-gfm-heading-id'
 import { markedHighlight } from 'marked-highlight'
-import markedKatex from 'marked-katex-extension'
 import { processFileSystemError } from '@/utils/file-error'
 import { validateFile, validateMarkdownExtension } from './file-validation'
 import { sanitizeHTML } from './sanitize-html'
 
-const markedEmojiOptions = {
-  emojis: nameToEmoji,
-  renderer: (token: { emoji: string }) => `<g-emoji>${token.emoji}</g-emoji>`,
-}
+const LIVE_BLOCK_ATTRIBUTE = 'data-pvmd-block-id'
 
 const starryNight = await createStarryNight(common)
 
@@ -27,26 +18,54 @@ marked.use(
     gfm: true,
     pedantic: false,
   },
-  markedAlert(),
-  markedFootnote(),
-  markedKatex({ throwOnError: false }),
-  markedEmoji(markedEmojiOptions),
   markedHighlight({
     highlight(code, lang) {
       const scope = starryNight.flagToScope(lang)
       return scope ? toHtml(starryNight.highlight(code, scope)) : code
     },
   }),
-  gfmHeadingId(),
 )
 
+type MarkdownToken = ReturnType<typeof marked.lexer>[number]
+
+export interface MarkdownBlock {
+  id: string
+  html: string
+}
+
+export interface MarkdownDocument {
+  blocks: MarkdownBlock[]
+  html: string
+}
+
 export function parseMarkdown(content: string): string {
-  const html = marked.parse(
-    // eslint-disable-next-line no-misleading-character-class
-    content.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, ''),
-  ) as string
+  const html = marked.parse(normalizeMarkdownContent(content)) as string
 
   return sanitizeHTML(html)
+}
+
+export function renderMarkdownDocument(content: string): MarkdownDocument {
+  const tokens = marked.lexer(normalizeMarkdownContent(content))
+  const blockOccurrences = new Map<string, number>()
+
+  const blocks = tokens.map((token) => {
+    const key = getBlockKey(token)
+    const occurrence = (blockOccurrences.get(key) ?? 0) + 1
+    blockOccurrences.set(key, occurrence)
+
+    const id = createBlockId(token.type, key, occurrence)
+    const html = sanitizeHTML(marked.parser([token] as MarkdownToken[]))
+
+    return {
+      id,
+      html,
+    }
+  })
+
+  return {
+    blocks,
+    html: blocks.map((block) => wrapBlock(block.id, block.html)).join(''),
+  }
 }
 
 export function readFile(path: string): string {
@@ -62,4 +81,32 @@ export function readMarkdownFile(path: string): string {
   validateMarkdownExtension(path)
 
   return readFile(path)
+}
+
+function normalizeMarkdownContent(content: string): string {
+  // eslint-disable-next-line no-misleading-character-class
+  return content.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, '')
+}
+
+function getBlockKey(token: MarkdownToken): string {
+  const raw = 'raw' in token && typeof token.raw === 'string' ? token.raw : ''
+  return `${token.type}:${raw}`
+}
+
+function createBlockId(type: string, key: string, occurrence: number): string {
+  return `pvmd-${type}-${hashString(key)}-${occurrence}`
+}
+
+function wrapBlock(id: string, html: string): string {
+  return `<div ${LIVE_BLOCK_ATTRIBUTE}="${id}">${html}</div>`
+}
+
+function hashString(value: string): string {
+  let hash = 5381
+
+  for (const character of value) {
+    hash = (hash * 33) ^ character.charCodeAt(0)
+  }
+
+  return (hash >>> 0).toString(36)
 }

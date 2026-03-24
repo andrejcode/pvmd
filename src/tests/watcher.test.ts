@@ -5,11 +5,13 @@ import createWatcher from '../watcher'
 // Mirrors the function-scoped debounceMs in createWatcher.
 const WATCH_DEBOUNCE_MS = 200
 
-const { watchMock, readFileSyncMock, parseMarkdownMock } = vi.hoisted(() => ({
-  watchMock: vi.fn(),
-  readFileSyncMock: vi.fn(),
-  parseMarkdownMock: vi.fn(),
-}))
+const { watchMock, readFileSyncMock, renderMarkdownDocumentMock } = vi.hoisted(
+  () => ({
+    watchMock: vi.fn(),
+    readFileSyncMock: vi.fn(),
+    renderMarkdownDocumentMock: vi.fn(),
+  }),
+)
 
 vi.mock('node:fs', () => ({
   watch: watchMock,
@@ -17,7 +19,7 @@ vi.mock('node:fs', () => ({
 }))
 
 vi.mock('../markdown', () => ({
-  parseMarkdown: parseMarkdownMock,
+  renderMarkdownDocument: renderMarkdownDocumentMock,
 }))
 
 type WatchEvent = 'change' | 'rename'
@@ -60,7 +62,10 @@ describe('createWatcher', () => {
     })
 
     readFileSyncMock.mockReturnValue('# Hello')
-    parseMarkdownMock.mockReturnValue('<h1>Hello</h1>')
+    renderMarkdownDocumentMock.mockReturnValue({
+      blocks: [{ id: 'block-1', html: '<h1>Hello</h1>' }],
+      html: '<div data-pvmd-block-id="block-1"><h1>Hello</h1></div>',
+    })
 
     processExitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new Error(`Process exited with code ${code}`)
@@ -74,7 +79,7 @@ describe('createWatcher', () => {
     vi.restoreAllMocks()
     watchMock.mockReset()
     readFileSyncMock.mockReset()
-    parseMarkdownMock.mockReset()
+    renderMarkdownDocumentMock.mockReset()
   })
 
   test('debounces rapid change events into a single reload', () => {
@@ -99,9 +104,42 @@ describe('createWatcher', () => {
 
     expect(readFileSyncMock).toHaveBeenCalledTimes(1)
     expect(readFileSyncMock).toHaveBeenCalledWith('/tmp/file.md', 'utf-8')
-    expect(parseMarkdownMock).toHaveBeenCalledTimes(1)
-    expect(parseMarkdownMock).toHaveBeenCalledWith('# Hello')
-    expect(client.write).toHaveBeenCalledWith('data: "<h1>Hello</h1>"\n\n')
+    expect(renderMarkdownDocumentMock).toHaveBeenCalledTimes(1)
+    expect(renderMarkdownDocumentMock).toHaveBeenCalledWith('# Hello')
+    expect(client.write).toHaveBeenCalledWith(
+      'data: {"kind":"full","html":"<div data-pvmd-block-id=\\"block-1\\"><h1>Hello</h1></div>"}\n\n',
+    )
+  })
+
+  test('sends patch operations after the first rendered document', () => {
+    renderMarkdownDocumentMock
+      .mockReturnValueOnce({
+        blocks: [{ id: 'block-1', html: '<h1>Hello</h1>' }],
+        html: '<div data-pvmd-block-id="block-1"><h1>Hello</h1></div>',
+      })
+      .mockReturnValueOnce({
+        blocks: [{ id: 'block-2', html: '<h1>Hello world</h1>' }],
+        html: '<div data-pvmd-block-id="block-2"><h1>Hello world</h1></div>',
+      })
+
+    const watcher = createWatcher('/tmp/file.md')
+    const client = createMockClient()
+
+    watcher.handleSSE(
+      {} as IncomingMessage,
+      client as unknown as ServerResponse,
+    )
+
+    watchCallback('change')
+    vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)
+
+    watchCallback('change')
+    vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)
+
+    expect(client.write).toHaveBeenNthCalledWith(
+      2,
+      'data: {"kind":"patch","ops":[{"type":"remove","blockId":"block-1"},{"type":"insert","html":"<div data-pvmd-block-id=\\"block-2\\"><h1>Hello world</h1></div>"}]}\n\n',
+    )
   })
 
   test('does not schedule reloads when no clients are connected', () => {
@@ -111,7 +149,7 @@ describe('createWatcher', () => {
     vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)
 
     expect(readFileSyncMock).not.toHaveBeenCalled()
-    expect(parseMarkdownMock).not.toHaveBeenCalled()
+    expect(renderMarkdownDocumentMock).not.toHaveBeenCalled()
   })
 
   test('rename closes the watcher and exits immediately', () => {

@@ -1,6 +1,11 @@
 import 'github-markdown-css/github-markdown.css'
 import 'katex/dist/katex.min.css'
 import './styles.css'
+import {
+  LIVE_BLOCK_ATTRIBUTE,
+  type LiveUpdateMessage,
+  type LiveUpdateOperation,
+} from '@/live-update'
 
 const eventSource = new EventSource('/events')
 const markdownContent = document.getElementById('markdown-content')
@@ -9,6 +14,10 @@ const closeAlertButton = document.getElementById('alert-close')
 const copyIconTemplate = document.getElementById(
   'icon-copy',
 ) as HTMLTemplateElement | null
+
+type EnhancementRoot = ParentNode & {
+  querySelectorAll: ParentNode['querySelectorAll']
+}
 
 function showDisconnectedAlert() {
   if (disconnectedAlert) {
@@ -24,12 +33,10 @@ function hideDisconnectedAlert() {
 
 const httpsOnly = document.body.hasAttribute('data-https-only')
 
-function addCopyButtons() {
-  if (!copyIconTemplate || !markdownContent) return
+function addCopyButtons(root: EnhancementRoot) {
+  if (!copyIconTemplate) return
 
-  const codeBlocks = Array.from(
-    markdownContent.querySelectorAll<HTMLElement>('pre code'),
-  )
+  const codeBlocks = Array.from(root.querySelectorAll<HTMLElement>('pre code'))
   for (const code of codeBlocks) {
     const pre = code.parentElement
     if (!pre) continue
@@ -53,10 +60,8 @@ function addCopyButtons() {
   }
 }
 
-function disableInteractiveContent() {
-  if (!markdownContent) return
-
-  const controls = markdownContent.querySelectorAll<HTMLElement>(
+function disableInteractiveContent(root: EnhancementRoot) {
+  const controls = root.querySelectorAll<HTMLElement>(
     'button, input, select, textarea',
   )
 
@@ -79,10 +84,10 @@ function disableInteractiveContent() {
   }
 }
 
-function blockInsecureContent() {
-  if (!httpsOnly || !markdownContent) return
+function blockInsecureContent(root: EnhancementRoot) {
+  if (!httpsOnly) return
 
-  const links = markdownContent.querySelectorAll<HTMLAnchorElement>('a[href]')
+  const links = root.querySelectorAll<HTMLAnchorElement>('a[href]')
   for (const link of links) {
     const href = link.getAttribute('href') ?? ''
     if (href.startsWith('http://')) {
@@ -93,7 +98,7 @@ function blockInsecureContent() {
     }
   }
 
-  const images = markdownContent.querySelectorAll<HTMLImageElement>('img[src]')
+  const images = root.querySelectorAll<HTMLImageElement>('img[src]')
   for (const img of images) {
     const src = img.getAttribute('src') ?? ''
     if (src.startsWith('http://')) {
@@ -102,10 +107,8 @@ function blockInsecureContent() {
   }
 }
 
-function openExternalLinksInNewTab() {
-  if (!markdownContent) return
-
-  const links = markdownContent.querySelectorAll<HTMLAnchorElement>('a[href]')
+function openExternalLinksInNewTab(root: EnhancementRoot) {
+  const links = root.querySelectorAll<HTMLAnchorElement>('a[href]')
   for (const link of links) {
     const href = link.getAttribute('href') ?? ''
     if (href.startsWith('http://') || href.startsWith('https://')) {
@@ -113,6 +116,66 @@ function openExternalLinksInNewTab() {
       link.setAttribute('rel', 'noopener noreferrer')
     }
   }
+}
+
+function applyEnhancements(root: EnhancementRoot) {
+  addCopyButtons(root)
+  disableInteractiveContent(root)
+  openExternalLinksInNewTab(root)
+  blockInsecureContent(root)
+}
+
+function applyFullHtml(html: string) {
+  if (!markdownContent) {
+    return
+  }
+
+  markdownContent.innerHTML = html
+  applyEnhancements(markdownContent)
+}
+
+function applyPatch(ops: LiveUpdateOperation[]) {
+  if (!markdownContent) {
+    return
+  }
+
+  for (const op of ops) {
+    if (op.type === 'remove') {
+      markdownContent
+        .querySelector(`[${LIVE_BLOCK_ATTRIBUTE}="${op.blockId}"]`)
+        ?.remove()
+      continue
+    }
+
+    const block = createBlockElement(op.html)
+    if (!block) {
+      continue
+    }
+
+    if (op.beforeBlockId) {
+      const referenceBlock = markdownContent.querySelector(
+        `[${LIVE_BLOCK_ATTRIBUTE}="${op.beforeBlockId}"]`,
+      )
+
+      if (referenceBlock) {
+        markdownContent.insertBefore(block, referenceBlock)
+      } else {
+        markdownContent.appendChild(block)
+      }
+    } else {
+      markdownContent.appendChild(block)
+    }
+
+    applyEnhancements(block)
+  }
+}
+
+function createBlockElement(html: string): HTMLElement | null {
+  const template = document.createElement('template')
+  template.innerHTML = html.trim()
+
+  const firstElement = template.content.firstElementChild
+  return firstElement instanceof HTMLElement ? firstElement : null
 }
 
 eventSource.onopen = () => {
@@ -124,13 +187,23 @@ eventSource.onerror = () => {
 }
 
 eventSource.onmessage = (event) => {
-  if (markdownContent && typeof event.data === 'string') {
-    markdownContent.innerHTML = JSON.parse(event.data) as string
-    addCopyButtons()
-    disableInteractiveContent()
-    openExternalLinksInNewTab()
-    blockInsecureContent()
+  if (typeof event.data !== 'string') {
+    return
   }
+
+  const message = JSON.parse(event.data) as LiveUpdateMessage | string
+
+  if (typeof message === 'string') {
+    applyFullHtml(message)
+    return
+  }
+
+  if (message.kind === 'full') {
+    applyFullHtml(message.html)
+    return
+  }
+
+  applyPatch(message.ops)
 }
 
 if (closeAlertButton) {
@@ -139,7 +212,6 @@ if (closeAlertButton) {
   })
 }
 
-addCopyButtons()
-disableInteractiveContent()
-openExternalLinksInNewTab()
-blockInsecureContent()
+if (markdownContent) {
+  applyEnhancements(markdownContent)
+}

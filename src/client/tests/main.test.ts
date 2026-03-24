@@ -26,6 +26,16 @@ describe('main', () => {
     }
   }
 
+  function sendPatch(ops: Array<Record<string, unknown>>) {
+    if (mockEventSource.onmessage) {
+      mockEventSource.onmessage(
+        new MessageEvent('message', {
+          data: JSON.stringify({ kind: 'patch', ops }),
+        }),
+      )
+    }
+  }
+
   beforeEach(() => {
     document.body.innerHTML = INITIAL_BODY_HTML
 
@@ -58,6 +68,27 @@ describe('main', () => {
       sendMarkdown(testHtml)
 
       expect(markdownContent?.innerHTML).toBe(testHtml)
+    })
+
+    test('should insert only the patched block content', async () => {
+      await loadMain()
+
+      sendMarkdown('<div data-pvmd-block-id="block-1"><p>Before</p></div>')
+      sendPatch([
+        {
+          type: 'insert',
+          html: '<div data-pvmd-block-id="block-2"><p>After</p></div>',
+        },
+      ])
+
+      const blocks = document.querySelectorAll('[data-pvmd-block-id]')
+      expect(blocks).toHaveLength(2)
+      expect(
+        document.getElementById('markdown-content')?.textContent,
+      ).toContain('Before')
+      expect(
+        document.getElementById('markdown-content')?.textContent,
+      ).toContain('After')
     })
 
     test('should disable rendered interactive controls', async () => {
