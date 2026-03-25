@@ -23,13 +23,19 @@ marked.use(
   },
   markedHighlight({
     highlight(code, lang) {
-      const scope = starryNight.flagToScope(lang)
-      return scope ? toHtml(starryNight.highlight(code, scope)) : code
+      return highlightCode(code, lang)
     },
   }),
 )
 
 type MarkdownToken = ReturnType<typeof marked.lexer>[number]
+type HighlightableToken = {
+  type?: unknown
+  text?: unknown
+  lang?: unknown
+  escaped?: unknown
+  [key: string]: unknown
+}
 
 export function parseMarkdown(content: string): string {
   const html = marked.parse(normalizeMarkdownContent(content)) as string
@@ -47,7 +53,7 @@ export function renderMarkdownDocument(content: string): LiveUpdateDocument {
     blockOccurrences.set(key, occurrence)
 
     const id = createBlockId(token.type, key, occurrence)
-    const html = sanitizeHTML(marked.parser([token] as MarkdownToken[]))
+    const html = renderTokenHtml(token)
 
     return {
       id,
@@ -79,6 +85,67 @@ export function readMarkdownFile(path: string): string {
 function normalizeMarkdownContent(content: string): string {
   // eslint-disable-next-line no-misleading-character-class
   return content.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, '')
+}
+
+function renderTokenHtml(token: MarkdownToken): string {
+  const tokenCopy = structuredClone(token)
+  highlightTokenTree(tokenCopy)
+
+  return sanitizeHTML(marked.parser([tokenCopy] as MarkdownToken[]))
+}
+
+function highlightTokenTree(
+  value: unknown,
+  seen: WeakSet<object> = new WeakSet(),
+): void {
+  if (!value || typeof value !== 'object') {
+    return
+  }
+
+  if (seen.has(value)) {
+    return
+  }
+
+  seen.add(value)
+
+  applyCodeHighlight(value as HighlightableToken)
+
+  for (const child of Object.values(value)) {
+    if (Array.isArray(child)) {
+      for (const item of child) {
+        highlightTokenTree(item, seen)
+      }
+      continue
+    }
+
+    highlightTokenTree(child, seen)
+  }
+}
+
+function applyCodeHighlight(token: HighlightableToken): void {
+  if (token.type !== 'code' || typeof token.text !== 'string') {
+    return
+  }
+
+  const highlighted = highlightCode(token.text, getLanguage(token.lang))
+
+  if (highlighted !== token.text) {
+    token.escaped = true
+    token.text = highlighted
+  }
+}
+
+function getLanguage(info: unknown): string {
+  if (typeof info !== 'string') {
+    return ''
+  }
+
+  return info.match(/\S*/)?.[0] ?? ''
+}
+
+function highlightCode(code: string, lang: string): string {
+  const scope = starryNight.flagToScope(lang)
+  return scope ? toHtml(starryNight.highlight(code, scope)) : code
 }
 
 function getBlockKey(token: MarkdownToken): string {

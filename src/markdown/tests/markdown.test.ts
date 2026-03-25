@@ -8,7 +8,11 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseMarkdown, readMarkdownFile } from '../index'
+import {
+  parseMarkdown,
+  readMarkdownFile,
+  renderMarkdownDocument,
+} from '../index'
 
 describe('parseMarkdown', () => {
   // prettier-ignore
@@ -173,6 +177,15 @@ describe('parseMarkdown', () => {
       expect(result).toContain('const')
       expect(result).toContain('x')
       expect(result).toContain('1')
+    })
+
+    test('should preserve syntax highlighting in rendered markdown blocks', () => {
+      const markdown = '```javascript\nconst x = 1;\n```'
+      const result = renderMarkdownDocument(markdown)
+
+      expect(result.blocks[0]?.html).toContain(
+        '<pre><code class="language-javascript"><span class="pl-k">const</span>',
+      )
     })
 
     test('should parse indented code blocks', () => {
