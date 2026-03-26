@@ -3,6 +3,7 @@ import { common, createStarryNight } from '@wooorm/starry-night'
 import { nameToEmoji } from 'gemoji'
 import { toHtml } from 'hast-util-to-html'
 import { marked } from 'marked'
+import markedAlert from 'marked-alert'
 import { markedEmoji } from 'marked-emoji'
 import { markedHighlight } from 'marked-highlight'
 import {
@@ -28,6 +29,7 @@ marked.use(
     gfm: true,
     pedantic: false,
   },
+  markedAlert(),
   markedEmoji(markedEmojiOptions),
   markedHighlight({
     highlight(code, lang) {
@@ -37,13 +39,6 @@ marked.use(
 )
 
 type MarkdownToken = ReturnType<typeof marked.lexer>[number]
-type HighlightableToken = {
-  type?: unknown
-  text?: unknown
-  lang?: unknown
-  escaped?: unknown
-  [key: string]: unknown
-}
 
 export function parseMarkdown(content: string): string {
   const html = marked.parse(normalizeMarkdownContent(content)) as string
@@ -96,59 +91,13 @@ function normalizeMarkdownContent(content: string): string {
 }
 
 function renderTokenHtml(token: MarkdownToken): string {
-  const tokenCopy = structuredClone(token)
-  highlightTokenTree(tokenCopy)
+  const tokens = [structuredClone(token)] as MarkdownToken[]
 
-  return sanitizeHTML(marked.parser([tokenCopy] as MarkdownToken[]))
-}
-
-function highlightTokenTree(
-  value: unknown,
-  seen: WeakSet<object> = new WeakSet(),
-): void {
-  if (!value || typeof value !== 'object') {
-    return
+  if (marked.defaults.walkTokens) {
+    void marked.walkTokens(tokens, marked.defaults.walkTokens)
   }
 
-  if (seen.has(value)) {
-    return
-  }
-
-  seen.add(value)
-
-  applyCodeHighlight(value as HighlightableToken)
-
-  for (const child of Object.values(value)) {
-    if (Array.isArray(child)) {
-      for (const item of child) {
-        highlightTokenTree(item, seen)
-      }
-      continue
-    }
-
-    highlightTokenTree(child, seen)
-  }
-}
-
-function applyCodeHighlight(token: HighlightableToken): void {
-  if (token.type !== 'code' || typeof token.text !== 'string') {
-    return
-  }
-
-  const highlighted = highlightCode(token.text, getLanguage(token.lang))
-
-  if (highlighted !== token.text) {
-    token.escaped = true
-    token.text = highlighted
-  }
-}
-
-function getLanguage(info: unknown): string {
-  if (typeof info !== 'string') {
-    return ''
-  }
-
-  return info.match(/\S*/)?.[0] ?? ''
+  return sanitizeHTML(marked.parser(tokens))
 }
 
 function highlightCode(code: string, lang: string): string {

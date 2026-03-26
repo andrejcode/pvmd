@@ -214,6 +214,32 @@ describe('parseMarkdown', () => {
       const result = parseMarkdown(markdown)
       expect(result).toContain('<blockquote>')
     })
+
+    test('should parse GitHub-style alerts', () => {
+      const markdown = '> [!NOTE]\n> hello alert'
+      const result = parseMarkdown(markdown)
+
+      expect(result).toContain(
+        '<div class="markdown-alert markdown-alert-note">',
+      )
+      expect(result).toContain('<p class="markdown-alert-title">')
+      expect(result).toContain('Note</p>')
+      expect(result).toContain('<p>hello alert</p>')
+    })
+
+    test('should preserve GitHub-style alerts in rendered markdown blocks', () => {
+      const markdown = '> [!NOTE]\n> hello alert'
+      const result = renderMarkdownDocument(markdown)
+
+      expect(result.blocks[0]?.html).toContain(
+        '<div class="markdown-alert markdown-alert-note">',
+      )
+      expect(result.blocks[0]?.html).toContain(
+        '<p class="markdown-alert-title">',
+      )
+      expect(result.blocks[0]?.html).toContain('Note</p>')
+      expect(result.blocks[0]?.html).toContain('<p>hello alert</p>')
+    })
   })
 
   describe('horizontal rules', () => {
