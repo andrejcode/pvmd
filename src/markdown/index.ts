@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { common, createStarryNight } from '@wooorm/starry-night'
+import { nameToEmoji } from 'gemoji'
 import { toHtml } from 'hast-util-to-html'
 import { marked } from 'marked'
+import { markedEmoji } from 'marked-emoji'
 import { markedHighlight } from 'marked-highlight'
 import {
   LIVE_BLOCK_ATTRIBUTE,
@@ -12,6 +14,11 @@ import { processFileSystemError } from '@/utils/file-error'
 import { validateFile, validateMarkdownExtension } from './file-validation'
 import { sanitizeHTML } from './sanitize-html'
 
+const markedEmojiOptions = {
+  emojis: nameToEmoji,
+  renderer: (token: { emoji: string }) => `<g-emoji>${token.emoji}</g-emoji>`,
+}
+
 const starryNight = await createStarryNight(common)
 
 marked.use(
@@ -21,6 +28,7 @@ marked.use(
     gfm: true,
     pedantic: false,
   },
+  markedEmoji(markedEmojiOptions),
   markedHighlight({
     highlight(code, lang) {
       return highlightCode(code, lang)
