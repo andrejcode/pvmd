@@ -46,12 +46,6 @@ marked.use(
 
 type MarkdownToken = ReturnType<typeof marked.lexer>[number]
 
-export function parseMarkdown(content: string): string {
-  const html = marked.parse(normalizeMarkdownContent(content)) as string
-
-  return sanitizeHTML(html)
-}
-
 export function renderMarkdownDocument(content: string): LiveUpdateDocument {
   const normalizedContent = preprocessMarkdownContent(
     normalizeMarkdownContent(content),
@@ -87,7 +81,7 @@ export function renderMarkdownDocument(content: string): LiveUpdateDocument {
   }
 }
 
-export function readFile(path: string): string {
+function readFile(path: string): string {
   try {
     return readFileSync(path, 'utf8')
   } catch (error) {

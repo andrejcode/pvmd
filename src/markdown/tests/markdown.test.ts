@@ -8,22 +8,24 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import {
-  parseMarkdown,
-  readMarkdownFile,
-  renderMarkdownDocument,
-} from '../index'
+import { readMarkdownFile, renderMarkdownDocument } from '../index'
 
-describe('parseMarkdown', () => {
+function renderMarkdown(markdown: string): string {
+  return renderMarkdownDocument(markdown)
+    .blocks.map((block) => block.html)
+    .join('')
+}
+
+describe('renderMarkdownDocument', () => {
   // prettier-ignore
   test('should correctly parse headings', () => {
-    expect(parseMarkdown('# Heading 1')).toContain('<h1 id="heading-1">Heading 1</h1>')
-    expect(parseMarkdown('## Heading 2')).toContain('<h2 id="heading-2">Heading 2</h2>')
-    expect(parseMarkdown('### Heading 3')).toContain('<h3 id="heading-3">Heading 3</h3>')
-    expect(parseMarkdown('#### Heading 4')).toContain('<h4 id="heading-4">Heading 4</h4>')
-    expect(parseMarkdown('##### Heading 5')).toContain('<h5 id="heading-5">Heading 5</h5>')
-    expect(parseMarkdown('###### Heading 6')).toContain('<h6 id="heading-6">Heading 6</h6>')
-    expect(parseMarkdown('#  Heading with spaces  ')).toContain(
+    expect(renderMarkdown('# Heading 1')).toContain('<h1 id="heading-1">Heading 1</h1>')
+    expect(renderMarkdown('## Heading 2')).toContain('<h2 id="heading-2">Heading 2</h2>')
+    expect(renderMarkdown('### Heading 3')).toContain('<h3 id="heading-3">Heading 3</h3>')
+    expect(renderMarkdown('#### Heading 4')).toContain('<h4 id="heading-4">Heading 4</h4>')
+    expect(renderMarkdown('##### Heading 5')).toContain('<h5 id="heading-5">Heading 5</h5>')
+    expect(renderMarkdown('###### Heading 6')).toContain('<h6 id="heading-6">Heading 6</h6>')
+    expect(renderMarkdown('#  Heading with spaces  ')).toContain(
       '<h1 id="heading-with-spaces">Heading with spaces</h1>',
     )
   })
@@ -47,39 +49,39 @@ describe('parseMarkdown', () => {
 
   describe('text formatting', () => {
     test('should parse bold text with **', () => {
-      expect(parseMarkdown('**bold text**')).toContain(
+      expect(renderMarkdown('**bold text**')).toContain(
         '<strong>bold text</strong>',
       )
     })
 
     test('should parse bold text with __', () => {
-      expect(parseMarkdown('__bold text__')).toContain(
+      expect(renderMarkdown('__bold text__')).toContain(
         '<strong>bold text</strong>',
       )
     })
 
     test('should parse italic text with *', () => {
-      expect(parseMarkdown('*italic text*')).toContain('<em>italic text</em>')
+      expect(renderMarkdown('*italic text*')).toContain('<em>italic text</em>')
     })
 
     test('should parse italic text with _', () => {
-      expect(parseMarkdown('_italic text_')).toContain('<em>italic text</em>')
+      expect(renderMarkdown('_italic text_')).toContain('<em>italic text</em>')
     })
 
     test('should parse bold and italic combined', () => {
-      expect(parseMarkdown('***bold and italic***')).toContain(
+      expect(renderMarkdown('***bold and italic***')).toContain(
         '<em><strong>bold and italic</strong></em>',
       )
     })
 
     test('should parse strikethrough text', () => {
-      expect(parseMarkdown('~~strikethrough text~~')).toContain(
+      expect(renderMarkdown('~~strikethrough text~~')).toContain(
         '<del>strikethrough text</del>',
       )
     })
 
     test('should parse emoji shortcodes without remote assets', () => {
-      const result = parseMarkdown('Launch time :rocket: :tada:')
+      const result = renderMarkdown('Launch time :rocket: :tada:')
       expect(result).toContain(
         '<p>Launch time <g-emoji>🚀</g-emoji> <g-emoji>🎉</g-emoji></p>',
       )
@@ -91,7 +93,7 @@ describe('parseMarkdown', () => {
   describe('lists', () => {
     test('should parse unordered lists with -', () => {
       const markdown = '- Item 1\n- Item 2\n- Item 3'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<ul>')
       expect(result).toContain('<li>Item 1</li>')
       expect(result).toContain('<li>Item 2</li>')
@@ -100,21 +102,21 @@ describe('parseMarkdown', () => {
 
     test('should parse unordered lists with *', () => {
       const markdown = '* Item 1\n* Item 2\n* Item 3'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<ul>')
       expect(result).toContain('<li>Item 1</li>')
     })
 
     test('should parse unordered lists with +', () => {
       const markdown = '+ Item 1\n+ Item 2\n+ Item 3'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<ul>')
       expect(result).toContain('<li>Item 1</li>')
     })
 
     test('should parse ordered lists', () => {
       const markdown = '1. First item\n2. Second item\n3. Third item'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<ol>')
       expect(result).toContain('<li>First item</li>')
       expect(result).toContain('<li>Second item</li>')
@@ -123,7 +125,7 @@ describe('parseMarkdown', () => {
 
     test('should parse nested lists', () => {
       const markdown = '- Parent\n  - Child 1\n  - Child 2'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<ul>')
       expect(result).toContain('<li>Parent')
     })
@@ -131,43 +133,43 @@ describe('parseMarkdown', () => {
 
   describe('links and images', () => {
     test('should parse inline links', () => {
-      expect(parseMarkdown('[Google](https://google.com)')).toContain(
+      expect(renderMarkdown('[Google](https://google.com)')).toContain(
         '<a href="https://google.com">Google</a>',
       )
     })
 
     test('should parse links with titles', () => {
       expect(
-        parseMarkdown('[Google](https://google.com "Google Search")'),
+        renderMarkdown('[Google](https://google.com "Google Search")'),
       ).toContain('title="Google Search"')
     })
 
     test('should parse autolinks', () => {
-      expect(parseMarkdown('<https://google.com>')).toContain(
+      expect(renderMarkdown('<https://google.com>')).toContain(
         '<a href="https://google.com">https://google.com</a>',
       )
     })
 
     test('should parse images', () => {
-      expect(parseMarkdown('![Alt text](image.jpg)')).toContain(
+      expect(renderMarkdown('![Alt text](image.jpg)')).toContain(
         '<img src="image.jpg" alt="Alt text">',
       )
     })
 
     test('should parse images with titles', () => {
-      expect(parseMarkdown('![Alt text](image.jpg "Image title")')).toContain(
+      expect(renderMarkdown('![Alt text](image.jpg "Image title")')).toContain(
         'title="Image title"',
       )
     })
 
     test('should strip unsafe javascript links but keep link text', () => {
-      const result = parseMarkdown('[Click me](<javascript:alert(1)>)')
+      const result = renderMarkdown('[Click me](<javascript:alert(1)>)')
       expect(result).toContain('<a>Click me</a>')
       expect(result).not.toContain('javascript:alert')
     })
 
     test('should keep safe data image sources', () => {
-      const result = parseMarkdown(
+      const result = renderMarkdown(
         '<img src="data:image/png;base64,AAAA" alt="Inline">',
       )
       expect(result).toContain('src="data:image/png;base64,AAAA"')
@@ -176,20 +178,20 @@ describe('parseMarkdown', () => {
 
   describe('code', () => {
     test('should parse inline code', () => {
-      expect(parseMarkdown('`inline code`')).toContain(
+      expect(renderMarkdown('`inline code`')).toContain(
         '<code>inline code</code>',
       )
     })
 
     test('should parse code blocks', () => {
       const markdown = '```\ncode block\n```'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<pre><code>code block')
     })
 
     test('should parse code blocks with language', () => {
       const markdown = '```javascript\nconst x = 1;\n```'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<pre><code class="language-javascript">')
       expect(result).toContain('const')
       expect(result).toContain('x')
@@ -207,34 +209,34 @@ describe('parseMarkdown', () => {
 
     test('should parse indented code blocks', () => {
       const markdown = '    indented code'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<pre><code>indented code')
     })
   })
 
   describe('blockquotes', () => {
     test('should parse simple blockquotes', () => {
-      expect(parseMarkdown('> This is a quote')).toContain('<blockquote>')
-      expect(parseMarkdown('> This is a quote')).toContain(
+      expect(renderMarkdown('> This is a quote')).toContain('<blockquote>')
+      expect(renderMarkdown('> This is a quote')).toContain(
         '<p>This is a quote</p>',
       )
     })
 
     test('should parse multi-line blockquotes', () => {
       const markdown = '> Line 1\n> Line 2\n> Line 3'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<blockquote>')
     })
 
     test('should parse nested blockquotes', () => {
       const markdown = '> Quote\n> > Nested quote'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<blockquote>')
     })
 
     test('should parse GitHub-style alerts', () => {
       const markdown = '> [!NOTE]\n> hello alert'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
 
       expect(result).toContain(
         '<div class="markdown-alert markdown-alert-note">',
@@ -291,13 +293,13 @@ describe('parseMarkdown', () => {
 
   describe('math (KaTeX)', () => {
     test('should render inline math', () => {
-      const result = parseMarkdown('This is $E = mc^2$ inline.')
+      const result = renderMarkdown('This is $E = mc^2$ inline.')
       expect(result).toContain('class="katex"')
       expect(result).toContain('<math')
     })
 
     test('should render block math', () => {
-      const result = parseMarkdown('$$\n\\frac{a}{b}\n$$')
+      const result = renderMarkdown('$$\n\\frac{a}{b}\n$$')
       expect(result).toContain('class="katex-display"')
       expect(result).toContain('<math')
     })
@@ -317,15 +319,15 @@ describe('parseMarkdown', () => {
 
   describe('horizontal rules', () => {
     test('should parse horizontal rules with ---', () => {
-      expect(parseMarkdown('---')).toContain('<hr>')
+      expect(renderMarkdown('---')).toContain('<hr>')
     })
 
     test('should parse horizontal rules with ***', () => {
-      expect(parseMarkdown('***')).toContain('<hr>')
+      expect(renderMarkdown('***')).toContain('<hr>')
     })
 
     test('should parse horizontal rules with ___', () => {
-      expect(parseMarkdown('___')).toContain('<hr>')
+      expect(renderMarkdown('___')).toContain('<hr>')
     })
   })
 
@@ -333,7 +335,7 @@ describe('parseMarkdown', () => {
     test('should parse simple tables', () => {
       const markdown =
         '| Header 1 | Header 2 |\n|----------|----------|\n| Cell 1   | Cell 2   |'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<table>')
       expect(result).toContain('<thead>')
       expect(result).toContain('<tbody>')
@@ -344,7 +346,7 @@ describe('parseMarkdown', () => {
     test('should parse tables with alignment', () => {
       const markdown =
         '| Left | Center | Right |\n|:-----|:-----:|------:|\n| L1   |  C1   |   R1  |'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<table>')
     })
   })
@@ -352,13 +354,13 @@ describe('parseMarkdown', () => {
   describe('line breaks', () => {
     test('should handle single line breaks', () => {
       const markdown = 'Line 1\nLine 2'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<p>Line 1\nLine 2</p>')
     })
 
     test('should handle double line breaks as paragraphs', () => {
       const markdown = 'Paragraph 1\n\nParagraph 2'
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<p>Paragraph 1</p>')
       expect(result).toContain('<p>Paragraph 2</p>')
     })
@@ -381,7 +383,7 @@ This is a **bold** paragraph with *italic* text and \`inline code\`.
 const example = 'code block';
 \`\`\``
 
-      const result = parseMarkdown(markdown)
+      const result = renderMarkdown(markdown)
       expect(result).toContain('<h1 id="main-heading">Main Heading</h1>')
       expect(result).toContain('<strong>bold</strong>')
       expect(result).toContain('<em>italic</em>')
@@ -396,12 +398,12 @@ const example = 'code block';
 
   describe('raw HTML safety', () => {
     test('should strip script tags from rendered output', () => {
-      const result = parseMarkdown('<script>alert("xss")</script><p>safe</p>')
+      const result = renderMarkdown('<script>alert("xss")</script><p>safe</p>')
       expect(result).toBe('<p>safe</p>')
     })
 
     test('should strip interactive form controls except task list checkboxes', () => {
-      const result = parseMarkdown(
+      const result = renderMarkdown(
         '<button>run</button><input type="text"><select><option>one</option></select><textarea>text</textarea>',
       )
       expect(result).not.toContain('<button')
@@ -412,18 +414,18 @@ const example = 'code block';
     })
 
     test('should strip non-checkbox input elements from raw HTML', () => {
-      const result = parseMarkdown('<input type="text" value="hello">')
+      const result = renderMarkdown('<input type="text" value="hello">')
       expect(result).not.toContain('<input')
     })
 
     test('should strip event handler attributes from raw HTML', () => {
-      const result = parseMarkdown('<img src="image.jpg" onerror="alert(1)">')
+      const result = renderMarkdown('<img src="image.jpg" onerror="alert(1)">')
       expect(result).toContain('<img src="image.jpg">')
       expect(result).not.toContain('onerror')
     })
 
     test('should preserve escaped script text inside fenced code blocks', () => {
-      const result = parseMarkdown('```html\n<script>alert(1)</script>\n```')
+      const result = renderMarkdown('```html\n<script>alert(1)</script>\n```')
       expect(result).toContain('&lt;')
       expect(result).toContain('script')
       expect(result).toContain('alert')
@@ -432,7 +434,7 @@ const example = 'code block';
     })
 
     test('should preserve useful raw HTML elements', () => {
-      const result = parseMarkdown(
+      const result = renderMarkdown(
         '<div style="color: red"><details><summary>Title</summary><kbd>Ctrl</kbd></details></div>',
       )
       expect(result).toContain('<div style="color: red">')
@@ -442,7 +444,7 @@ const example = 'code block';
     })
 
     test('should preserve markdown task list checkboxes', () => {
-      const result = parseMarkdown('- [x] done\n- [ ] todo')
+      const result = renderMarkdown('- [x] done\n- [ ] todo')
       expect(result).toContain('type="checkbox"')
       expect(result).toContain('disabled')
     })
