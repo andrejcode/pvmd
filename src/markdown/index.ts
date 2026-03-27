@@ -7,6 +7,7 @@ import markedAlert from 'marked-alert'
 import { markedEmoji } from 'marked-emoji'
 import { gfmHeadingId } from 'marked-gfm-heading-id'
 import { markedHighlight } from 'marked-highlight'
+import markedKatex from 'marked-katex-extension'
 import {
   LIVE_BLOCK_ATTRIBUTE,
   type LiveUpdateBlock,
@@ -31,6 +32,7 @@ marked.use(
     pedantic: false,
   },
   markedAlert(),
+  markedKatex({ throwOnError: false }),
   markedEmoji(markedEmojiOptions),
   markedHighlight({
     highlight(code, lang) {

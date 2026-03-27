@@ -259,6 +259,32 @@ describe('parseMarkdown', () => {
     })
   })
 
+  describe('math (KaTeX)', () => {
+    test('should render inline math', () => {
+      const result = parseMarkdown('This is $E = mc^2$ inline.')
+      expect(result).toContain('class="katex"')
+      expect(result).toContain('<math')
+    })
+
+    test('should render block math', () => {
+      const result = parseMarkdown('$$\n\\frac{a}{b}\n$$')
+      expect(result).toContain('class="katex-display"')
+      expect(result).toContain('<math')
+    })
+
+    test('should preserve inline math in rendered markdown blocks', () => {
+      const result = renderMarkdownDocument('This is $E = mc^2$ inline.')
+      expect(result.blocks[0]?.html).toContain('class="katex"')
+      expect(result.blocks[0]?.html).toContain('<math')
+    })
+
+    test('should preserve block math in rendered markdown blocks', () => {
+      const result = renderMarkdownDocument('$$\n\\frac{a}{b}\n$$')
+      expect(result.blocks[0]?.html).toContain('class="katex-display"')
+      expect(result.blocks[0]?.html).toContain('<math')
+    })
+  })
+
   describe('horizontal rules', () => {
     test('should parse horizontal rules with ---', () => {
       expect(parseMarkdown('---')).toContain('<hr>')
