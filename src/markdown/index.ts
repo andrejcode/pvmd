@@ -5,6 +5,7 @@ import { toHtml } from 'hast-util-to-html'
 import { marked } from 'marked'
 import markedAlert from 'marked-alert'
 import { markedEmoji } from 'marked-emoji'
+import { gfmHeadingId } from 'marked-gfm-heading-id'
 import { markedHighlight } from 'marked-highlight'
 import {
   LIVE_BLOCK_ATTRIBUTE,
@@ -36,6 +37,7 @@ marked.use(
       return highlightCode(code, lang)
     },
   }),
+  gfmHeadingId(),
 )
 
 type MarkdownToken = ReturnType<typeof marked.lexer>[number]
@@ -47,7 +49,10 @@ export function parseMarkdown(content: string): string {
 }
 
 export function renderMarkdownDocument(content: string): LiveUpdateDocument {
-  const tokens = marked.lexer(normalizeMarkdownContent(content))
+  const normalizedContent = preprocessMarkdownContent(
+    normalizeMarkdownContent(content),
+  )
+  const tokens = processMarkdownTokens(marked.lexer(normalizedContent))
   const blockOccurrences = new Map<string, number>()
 
   const blocks: LiveUpdateBlock[] = tokens.map((token) => {
@@ -88,6 +93,14 @@ export function readMarkdownFile(path: string): string {
 function normalizeMarkdownContent(content: string): string {
   // eslint-disable-next-line no-misleading-character-class
   return content.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, '')
+}
+
+function preprocessMarkdownContent(content: string): string {
+  return marked.defaults.hooks?.preprocess?.call(marked, content) ?? content
+}
+
+function processMarkdownTokens(tokens: MarkdownToken[]): MarkdownToken[] {
+  return marked.defaults.hooks?.processAllTokens?.call(marked, tokens) ?? tokens
 }
 
 function renderTokenHtml(token: MarkdownToken): string {

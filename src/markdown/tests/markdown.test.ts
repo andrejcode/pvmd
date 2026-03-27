@@ -28,6 +28,23 @@ describe('parseMarkdown', () => {
     )
   })
 
+  test('should keep heading ids stable in rendered markdown blocks', () => {
+    const markdown = '# Heading\n\n[Jump](#heading)'
+    const result = renderMarkdownDocument(markdown)
+
+    expect(result.blocks[0]?.html).toContain('<h1 id="heading">Heading</h1>')
+    expect(result.blocks[1]?.html).toContain('<a href="#heading">Jump</a>')
+  })
+
+  test('should reset heading ids between rendered markdown documents', () => {
+    expect(renderMarkdownDocument('# Heading').blocks[0]?.html).toContain(
+      '<h1 id="heading">Heading</h1>',
+    )
+    expect(renderMarkdownDocument('# Heading').blocks[0]?.html).toContain(
+      '<h1 id="heading">Heading</h1>',
+    )
+  })
+
   describe('text formatting', () => {
     test('should parse bold text with **', () => {
       expect(parseMarkdown('**bold text**')).toContain(
