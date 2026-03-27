@@ -1,8 +1,8 @@
 # pvmd
 
-`pvmd` is a local Markdown previewer for the terminal. It starts a small HTTP server, renders a Markdown file into an HTML document, and serves it in the browser with optional live updates when the source file changes.
+`pvmd` is a terminal-first Markdown previewer for local files with GitHub-style rendering. It renders a Markdown document, serves it on `127.0.0.1`, and opens a lightweight browser view with optional live updates.
 
-The project is designed for fast local previewing of Markdown documents while keeping the runtime model simple: a single CLI command, a localhost server, and a lightweight browser client.
+It is designed for fast local previewing with a simple runtime model: one CLI command, one local server, and one browser client. GitHub-style rendering is a key benefit for README and documentation workflows, but the main goal is quick, reliable previewing of Markdown from the terminal. The latest live-update pipeline uses block-level patching so large documents can refresh without replacing the full page.
 
 ## Table of Contents
 
@@ -17,22 +17,14 @@ The project is designed for fast local previewing of Markdown documents while ke
 
 ## Features
 
-- Local preview of Markdown files in the browser
-- Live reload when the source file changes
-- Block-level live updates that patch only the changed markdown sections in the browser
+- Local Markdown preview in the browser from a single terminal command
+- GitHub-style Markdown rendering for README, docs, and contribution guide reviews before publishing changes
+- Incremental live updates with block-level DOM patching instead of full-page replacement
 - Multi-client update delivery over Server-Sent Events
-- GitHub-flavored Markdown support
-- Syntax highlighting for fenced code blocks
-- Footnotes, alerts, heading anchors, emoji rendering, and KaTeX support
-- Heading anchor support for table-of-contents and `#section` navigation
-- Copy buttons for code blocks
-- Local static image serving for Markdown content
-- Disconnection status alert in the browser when the live update stream is unavailable
-- Optional browser auto-open
-- Optional HTTPS-only filtering for remote links and images
-- Input validation for Markdown files, extensions, file size, and file-system edge cases
-- User-friendly error handling for common file-system failures
-- Explicit custom error message when the selected port is already in use
+- GitHub-style Markdown rendering with syntax highlighting, alerts, footnotes, heading anchors, emoji, and KaTeX
+- Copy buttons for fenced code blocks and local static image serving for Markdown content
+- Optional browser auto-open and `--https-only` filtering for remote links and images
+- Strict file validation, path traversal protection, and user-friendly error handling
 
 ## Installation
 
@@ -51,6 +43,8 @@ npx @andrejcode/pvmd ./README.md
 ```bash
 pvmd [options] <file>
 ```
+
+Typical workflow: preview a Markdown file locally, iterate quickly, and optionally verify how it will look in a GitHub-style view before publishing changes.
 
 Preview a Markdown file:
 
@@ -92,32 +86,31 @@ pvmd --no-watch ./docs/guide.md
 ## Architecture
 
 1. `pvmd` resolves and validates the Markdown file path.
-2. The file is checked before reading: path resolution blocks traversal, the extension must be a supported Markdown extension, and the target must be a regular file within the allowed size limit.
-3. The file is rendered to HTML with `marked`, the project's Markdown extensions, syntax-highlighted code blocks, and server-side sanitization, then wrapped into top-level DOM blocks for incremental updates.
-4. A local server serves the rendered page on `127.0.0.1` and injects the parsed HTML into the client template.
-5. When watch mode is enabled, file changes are pushed to connected browsers through Server-Sent Events as either full document payloads or block patch operations.
+2. The file is rendered with `marked`, the project's Markdown extensions, syntax highlighting, and server-side sanitization.
+3. The result is split into top-level DOM blocks so live updates can patch only the changed sections.
+4. A local server on `127.0.0.1` serves the rendered page, static local assets, and live-update events.
 
 ### Live Update Model
 
-`pvmd` uses Server-Sent Events for one-way update delivery from the local server to the browser. This matches the preview use case well: the browser only needs to receive rendered HTML updates when the source Markdown file changes.
+`pvmd` uses Server-Sent Events for one-way updates from the local server to the browser. When the source file changes, the client receives either a full initial render or a block patch message that inserts and removes only the affected sections.
 
-The server can keep multiple browser clients connected at the same time. When the watched file changes, each active client receives either a full initial render or a block-level patch message that inserts and removes only the changed sections. This reduces HTML transfer size, preserves untouched DOM nodes in the browser, and reruns client-side enhancements only for the affected blocks. If the event stream disconnects, the browser client shows a visible status alert so the user knows live updates are no longer being received.
+This keeps HTML transfer smaller, preserves untouched DOM nodes, and reruns client-side enhancements only for updated blocks. Multiple browser clients can stay connected at the same time, and the browser shows a visible alert if the event stream disconnects.
 
 ### Static Local Files
 
-In addition to the main rendered document, the server can serve local static image files referenced by the Markdown document. File resolution is scoped to the Markdown file directory, validated against path traversal, and restricted to an allowlist of image file types. SVG responses receive an additional restrictive Content Security Policy.
+The server can also serve local image files referenced by the Markdown document. File resolution is scoped to the Markdown file directory, protected against traversal, and limited to an allowlist of supported image types. SVG responses receive an additional restrictive Content Security Policy.
 
 ### Error Handling
 
-The project favors explicit and user-readable failure modes. Common file-system issues such as missing files, permission errors, directories passed as files, symbolic links, invalid file types, null bytes, or oversized inputs are converted into direct error messages rather than low-level Node.js output.
+The project favors explicit, user-readable failure modes. Common file-system issues such as missing files, permission errors, directories passed as files, symbolic links, invalid file types, null bytes, or oversized inputs are converted into direct error messages rather than low-level Node.js output.
 
-Server startup errors are also handled deliberately. If the configured port is already in use, `pvmd` prints a custom message instructing the user to choose a different port.
+Server startup errors are handled the same way. If the selected port is already in use, `pvmd` prints a custom message explaining how to recover.
 
 ## Security
 
-Markdown previewing is inherently a browser-rendering problem, so `pvmd` takes a defense-in-depth approach instead of stripping Markdown features down to a minimal subset.
+Markdown previewing is inherently a browser-rendering problem, so `pvmd` uses a defense-in-depth approach instead of reducing Markdown support to a minimal subset.
 
-Rather than removing the richer GitHub-style rendering capabilities, the project relies on restrictive response headers and controlled serving behavior to reduce risk while preserving features such as alerts, syntax highlighting, emoji rendering, footnotes, and mathematical notation.
+Rather than removing richer GitHub-style features, the project combines server-side sanitization, restrictive response headers, and controlled local file serving to reduce risk while preserving alerts, syntax highlighting, emoji, footnotes, and mathematical notation.
 
 Key protections include:
 
@@ -133,9 +126,9 @@ Key protections include:
 - Validation that rejects directories, symbolic links, unsupported file types, and oversized files
 - Restrictive CSP for served SVG assets
 
-This setup allows the project to keep useful GitHub-like Markdown behavior while still applying meaningful browser-side and server-side controls.
+This keeps the preview feature-rich while still applying meaningful browser-side and server-side controls.
 
-You should only preview Markdown that you trust. Even with the available safeguards, review the source of any Markdown file before opening it, especially if it comes from an external or unverified source. When appropriate, enable additional safety-oriented flags such as `--https-only`.
+You should still preview only Markdown that you trust. Even with the available safeguards, review the source of any Markdown file before opening it, especially if it comes from an external or unverified source.
 
 ## Development
 
@@ -157,11 +150,9 @@ Run it in development:
 npm run dev
 ```
 
-During development, the client build is written into the `.dev-build` directory. The server-side template loader reads the HTML template from `.dev-build/client/index.html` when `NODE_ENV=development`.
+During development, the client build is written into `.dev-build`, and the server reads the template from `.dev-build/client/index.html` when `NODE_ENV=development`.
 
-This matters because the browser client is served by the same local HTTP server as the rendered Markdown page. When client code changes, the development client build can be rebuilt in place without requiring the developer to restart `npm run dev`. The application process keeps serving the updated client assets from `.dev-build`, which shortens the edit-refresh loop during frontend work.
-
-In practice, `npm run dev` runs the application process and the client build process together so both sides can evolve during local development.
+This allows client changes to rebuild in place without restarting the application process. In practice, `npm run dev` runs the app and client build processes together so the local preview loop stays short.
 
 ## License
 
