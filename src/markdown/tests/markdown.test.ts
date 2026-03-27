@@ -257,6 +257,36 @@ describe('parseMarkdown', () => {
       expect(result.blocks[0]?.html).toContain('Note</p>')
       expect(result.blocks[0]?.html).toContain('<p>hello alert</p>')
     })
+
+    test('should render footnotes after referenced content in rendered markdown blocks', () => {
+      const markdown = 'Paragraph with note[^1].\n\n[^1]: Footnote text'
+      const result = renderMarkdownDocument(markdown)
+
+      expect(result.html.indexOf('Paragraph with note')).toBeLessThan(
+        result.html.indexOf('<section class="footnotes"'),
+      )
+      expect(result.html).toContain('href="#footnote-1"')
+      expect(result.html).toContain('id="footnote-1"')
+    })
+
+    test('should update rendered footnotes when footnote content changes', () => {
+      const previous = renderMarkdownDocument(
+        'Paragraph with note[^1].\n\n[^1]: First',
+      )
+      const next = renderMarkdownDocument(
+        'Paragraph with note[^1].\n\n[^1]: Second',
+      )
+
+      const previousFootnotes = previous.blocks.find((block) =>
+        block.html.includes('<section class="footnotes"'),
+      )
+      const nextFootnotes = next.blocks.find((block) =>
+        block.html.includes('<section class="footnotes"'),
+      )
+
+      expect(previousFootnotes?.id).not.toBe(nextFootnotes?.id)
+      expect(nextFootnotes?.html).toContain('Second')
+    })
   })
 
   describe('math (KaTeX)', () => {

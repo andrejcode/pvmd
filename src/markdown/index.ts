@@ -5,6 +5,7 @@ import { toHtml } from 'hast-util-to-html'
 import { marked } from 'marked'
 import markedAlert from 'marked-alert'
 import { markedEmoji } from 'marked-emoji'
+import markedFootnote from 'marked-footnote'
 import { gfmHeadingId } from 'marked-gfm-heading-id'
 import { markedHighlight } from 'marked-highlight'
 import markedKatex from 'marked-katex-extension'
@@ -32,6 +33,7 @@ marked.use(
     pedantic: false,
   },
   markedAlert(),
+  markedFootnote(),
   markedKatex({ throwOnError: false }),
   markedEmoji(markedEmojiOptions),
   markedHighlight({
@@ -54,22 +56,30 @@ export function renderMarkdownDocument(content: string): LiveUpdateDocument {
   const normalizedContent = preprocessMarkdownContent(
     normalizeMarkdownContent(content),
   )
-  const tokens = processMarkdownTokens(marked.lexer(normalizedContent))
+  const tokens = walkMarkdownTokens(
+    processMarkdownTokens(marked.lexer(normalizedContent)),
+  )
   const blockOccurrences = new Map<string, number>()
 
-  const blocks: LiveUpdateBlock[] = tokens.map((token) => {
-    const key = getBlockKey(token)
+  const blocks: LiveUpdateBlock[] = []
+
+  for (const token of tokens) {
+    const html = renderTokenHtml(token)
+    if (!html.trim()) {
+      continue
+    }
+
+    const key = getBlockKey(token, html)
     const occurrence = (blockOccurrences.get(key) ?? 0) + 1
     blockOccurrences.set(key, occurrence)
 
     const id = createBlockId(token.type, key, occurrence)
-    const html = renderTokenHtml(token)
 
-    return {
+    blocks.push({
       id,
       html,
-    }
-  })
+    })
+  }
 
   return {
     blocks,
@@ -105,14 +115,16 @@ function processMarkdownTokens(tokens: MarkdownToken[]): MarkdownToken[] {
   return marked.defaults.hooks?.processAllTokens?.call(marked, tokens) ?? tokens
 }
 
-function renderTokenHtml(token: MarkdownToken): string {
-  const tokens = [structuredClone(token)] as MarkdownToken[]
-
+function walkMarkdownTokens(tokens: MarkdownToken[]): MarkdownToken[] {
   if (marked.defaults.walkTokens) {
     void marked.walkTokens(tokens, marked.defaults.walkTokens)
   }
 
-  return sanitizeHTML(marked.parser(tokens))
+  return tokens
+}
+
+function renderTokenHtml(token: MarkdownToken): string {
+  return sanitizeHTML(marked.parser([structuredClone(token)]))
 }
 
 function highlightCode(code: string, lang: string): string {
@@ -120,9 +132,10 @@ function highlightCode(code: string, lang: string): string {
   return scope ? toHtml(starryNight.highlight(code, scope)) : code
 }
 
-function getBlockKey(token: MarkdownToken): string {
+function getBlockKey(token: MarkdownToken, html: string): string {
   const raw = 'raw' in token && typeof token.raw === 'string' ? token.raw : ''
-  return `${token.type}:${raw}`
+  const content = html || raw
+  return `${token.type}:${content}`
 }
 
 function createBlockId(type: string, key: string, occurrence: number): string {
