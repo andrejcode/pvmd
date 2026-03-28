@@ -1,10 +1,7 @@
 describe('main', () => {
   const INITIAL_BODY_HTML = `
-      <div id="disconnected-alert" hidden>
-        <span id="alert-message">Connection lost. Waiting to reconnect...</span>
-        <button id="alert-close" aria-label="Close alert"></button>
-      </div>
       <main id="markdown-content" role="article" aria-live="polite" aria-atomic="false" aria-label="Markdown content"></main>
+      <template id="icon-alert-close"><svg data-testid="close-icon"></svg></template>
       <template id="icon-copy"><svg data-testid="copy-icon"></svg></template>
     `
   let mockEventSource: {
@@ -38,6 +35,7 @@ describe('main', () => {
 
   beforeEach(() => {
     document.body.innerHTML = INITIAL_BODY_HTML
+    document.body.removeAttribute('data-watch')
 
     mockWriteText = vi.fn(() => Promise.resolve())
     Object.assign(navigator, {
@@ -56,6 +54,23 @@ describe('main', () => {
     )
 
     vi.resetModules()
+  })
+
+  describe('watch mode', () => {
+    test('should create EventSource when watch mode is enabled', async () => {
+      await loadMain()
+
+      expect(globalThis.EventSource).toHaveBeenCalledWith('/events')
+    })
+
+    test('should not create EventSource when watch mode is disabled', async () => {
+      document.body.setAttribute('data-watch', 'false')
+
+      await loadMain()
+
+      expect(globalThis.EventSource).not.toHaveBeenCalled()
+      expect(document.getElementById('disconnected-alert')).toBeNull()
+    })
   })
 
   describe('markdown content', () => {
@@ -310,35 +325,34 @@ describe('main', () => {
   })
 
   describe('disconnected alert', () => {
-    test('should be hidden initially', async () => {
+    test('should not exist initially', async () => {
       await loadMain()
 
-      const alert = document.getElementById('disconnected-alert')
-      expect(alert).toBeTruthy()
-      expect(alert?.hidden).toBe(true)
+      expect(document.getElementById('disconnected-alert')).toBeNull()
     })
 
     test('should appear when connection is lost (onerror)', async () => {
       await loadMain()
 
-      const alert = document.getElementById('disconnected-alert')
-      expect(alert?.hidden).toBe(true)
+      expect(document.getElementById('disconnected-alert')).toBeNull()
 
       if (mockEventSource.onerror) {
         mockEventSource.onerror()
       }
 
+      const alert = document.getElementById('disconnected-alert')
+      expect(alert).toBeTruthy()
       expect(alert?.hidden).toBe(false)
+      expect(alert?.querySelector('svg[data-testid="close-icon"]')).toBeTruthy()
     })
 
     test('should disappear when client reconnects (onopen)', async () => {
       await loadMain()
 
-      const alert = document.getElementById('disconnected-alert')
-
       if (mockEventSource.onerror) {
         mockEventSource.onerror()
       }
+      const alert = document.getElementById('disconnected-alert')
       expect(alert?.hidden).toBe(false)
 
       if (mockEventSource.onopen) {
@@ -351,12 +365,12 @@ describe('main', () => {
     test('should hide alert when close button is clicked', async () => {
       await loadMain()
 
-      const alert = document.getElementById('disconnected-alert')
-      const closeButton = document.getElementById('alert-close')
-
       if (mockEventSource.onerror) {
         mockEventSource.onerror()
       }
+
+      const alert = document.getElementById('disconnected-alert')
+      const closeButton = document.getElementById('alert-close')
       expect(alert?.hidden).toBe(false)
 
       closeButton?.click()

@@ -7,21 +7,24 @@ import {
   type LiveUpdateOperation,
 } from '@/shared/live-update'
 
-const eventSource = new EventSource('/events')
 const markdownContent = document.getElementById('markdown-content')
-const disconnectedAlert = document.getElementById('disconnected-alert')
-const closeAlertButton = document.getElementById('alert-close')
+const watchEnabled = document.body.dataset['watch'] !== 'false'
+const closeAlertIconTemplate = document.getElementById(
+  'icon-alert-close',
+) as HTMLTemplateElement | null
 const copyIconTemplate = document.getElementById(
   'icon-copy',
 ) as HTMLTemplateElement | null
+let disconnectedAlert: HTMLDivElement | null = null
 
 type EnhancementRoot = ParentNode & {
   querySelectorAll: ParentNode['querySelectorAll']
 }
 
 function showDisconnectedAlert() {
-  if (disconnectedAlert) {
-    disconnectedAlert.hidden = false
+  const alert = getDisconnectedAlert()
+  if (alert) {
+    alert.hidden = false
   }
 }
 
@@ -180,40 +183,78 @@ function createBlockElement(html: string): HTMLElement | null {
   return firstElement instanceof HTMLElement ? firstElement : null
 }
 
-eventSource.onopen = () => {
-  hideDisconnectedAlert()
-}
-
-eventSource.onerror = () => {
-  showDisconnectedAlert()
-}
-
-eventSource.onmessage = (event) => {
-  if (typeof event.data !== 'string') {
-    return
+function getDisconnectedAlert(): HTMLDivElement | null {
+  if (!watchEnabled) {
+    return null
   }
 
-  const message = JSON.parse(event.data) as LiveUpdateMessage | string
-
-  if (typeof message === 'string') {
-    applyFullHtml(message)
-    return
+  if (disconnectedAlert) {
+    return disconnectedAlert
   }
 
-  if (message.kind === 'full') {
-    applyFullHtml(message.html)
-    return
+  const alert = document.createElement('div')
+  alert.id = 'disconnected-alert'
+  alert.hidden = true
+
+  const message = document.createElement('span')
+  message.id = 'alert-message'
+  message.textContent = 'Connection lost. Waiting to reconnect...'
+
+  const closeButton = document.createElement('button')
+  closeButton.id = 'alert-close'
+  closeButton.ariaLabel = 'Close alert'
+  if (closeAlertIconTemplate) {
+    closeButton.appendChild(closeAlertIconTemplate.content.cloneNode(true))
   }
-
-  applyPatch(message.ops)
-}
-
-if (closeAlertButton) {
-  closeAlertButton.addEventListener('click', () => {
+  closeButton.addEventListener('click', () => {
     hideDisconnectedAlert()
   })
+
+  alert.append(message, closeButton)
+  markdownContent?.before(alert)
+  disconnectedAlert = alert
+
+  return disconnectedAlert
+}
+
+function connectLiveUpdates() {
+  if (!watchEnabled) {
+    return
+  }
+
+  const eventSource = new EventSource('/events')
+
+  eventSource.onopen = () => {
+    hideDisconnectedAlert()
+  }
+
+  eventSource.onerror = () => {
+    showDisconnectedAlert()
+  }
+
+  eventSource.onmessage = (event) => {
+    if (typeof event.data !== 'string') {
+      return
+    }
+
+    const message = JSON.parse(event.data) as LiveUpdateMessage | string
+
+    if (typeof message === 'string') {
+      applyFullHtml(message)
+      return
+    }
+
+    if (message.kind === 'full') {
+      applyFullHtml(message.html)
+      return
+    }
+
+    applyPatch(message.ops)
+  }
 }
 
 if (markdownContent) {
   applyEnhancements(markdownContent)
 }
+
+connectLiveUpdates()

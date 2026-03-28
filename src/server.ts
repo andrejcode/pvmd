@@ -58,6 +58,24 @@ function buildCSPHeader(nonce: string): string {
   ].join('; ')
 }
 
+function applyBodyDataAttributes(html: string): string {
+  const attributes: string[] = []
+
+  if (config.httpsOnly) {
+    attributes.push('data-https-only')
+  }
+
+  if (!config.watch) {
+    attributes.push('data-watch="false"')
+  }
+
+  if (attributes.length === 0) {
+    return html
+  }
+
+  return html.replace(/<body\b/, `<body ${attributes.join(' ')}`)
+}
+
 function respondNotFound(req: IncomingMessage, res: ServerResponse) {
   res.writeHead(404, { 'content-type': 'application/json' })
   res.end(
@@ -92,10 +110,7 @@ export function createServer(
 ): Server {
   return createHttpServer((req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'GET' && req.url === '/') {
-      let html = getHTML()
-      if (config.httpsOnly) {
-        html = html.replace('<body', '<body data-https-only')
-      }
+      const html = applyBodyDataAttributes(getHTML())
       const nonce = generateNonce()
       const htmlWithNonce = applyNonce(html, nonce)
       const csp = buildCSPHeader(nonce)

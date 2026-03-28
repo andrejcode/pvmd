@@ -143,6 +143,30 @@ describe('createServer', () => {
     })
   })
 
+  test('GET / with watch disabled injects data-watch="false" on body', async () => {
+    config.watch = false
+
+    try {
+      await withTestServer(async (request) => {
+        const res = await request(ROOT_PATH)
+        const body = await res.text()
+        expect(body).toContain('data-watch="false"')
+      })
+    } finally {
+      config.watch = true
+    }
+  })
+
+  test('GET / with watch enabled does not inject data-watch="false"', async () => {
+    config.watch = true
+
+    await withTestServer(async (request) => {
+      const res = await request(ROOT_PATH)
+      const body = await res.text()
+      expect(body).not.toContain('data-watch="false"')
+    })
+  })
+
   test('POST / returns 404', async () => {
     await withTestServer(async (request) => {
       const res = await request(ROOT_PATH, {
