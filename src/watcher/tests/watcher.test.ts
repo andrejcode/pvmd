@@ -5,20 +5,19 @@ import createWatcher from '..'
 // Mirrors the function-scoped debounceMs in createWatcher.
 const WATCH_DEBOUNCE_MS = 200
 
-const { watchMock, readFileSyncMock, renderMarkdownDocumentMock } = vi.hoisted(
-  () => ({
+const { watchMock, readMarkdownFileMock, renderMarkdownDocumentMock } =
+  vi.hoisted(() => ({
     watchMock: vi.fn(),
-    readFileSyncMock: vi.fn(),
+    readMarkdownFileMock: vi.fn(),
     renderMarkdownDocumentMock: vi.fn(),
-  }),
-)
+  }))
 
 vi.mock('node:fs', () => ({
   watch: watchMock,
-  readFileSync: readFileSyncMock,
 }))
 
 vi.mock('../../markdown', () => ({
+  readMarkdownFile: readMarkdownFileMock,
   renderMarkdownDocument: renderMarkdownDocumentMock,
 }))
 
@@ -61,7 +60,7 @@ describe('createWatcher', () => {
       return { close: closeMock }
     })
 
-    readFileSyncMock.mockReturnValue('# Hello')
+    readMarkdownFileMock.mockReturnValue('# Hello')
     renderMarkdownDocumentMock.mockReturnValue({
       blocks: [{ id: 'block-1', html: '<h1>Hello</h1>' }],
       html: '<div data-pvmd-block-id="block-1"><h1>Hello</h1></div>',
@@ -78,7 +77,7 @@ describe('createWatcher', () => {
     vi.useRealTimers()
     vi.restoreAllMocks()
     watchMock.mockReset()
-    readFileSyncMock.mockReset()
+    readMarkdownFileMock.mockReset()
     renderMarkdownDocumentMock.mockReset()
   })
 
@@ -95,15 +94,15 @@ describe('createWatcher', () => {
     watchCallback('change')
     watchCallback('change')
 
-    expect(readFileSyncMock).not.toHaveBeenCalled()
+    expect(readMarkdownFileMock).not.toHaveBeenCalled()
 
     vi.advanceTimersByTime(WATCH_DEBOUNCE_MS - 1)
-    expect(readFileSyncMock).not.toHaveBeenCalled()
+    expect(readMarkdownFileMock).not.toHaveBeenCalled()
 
     vi.advanceTimersByTime(1)
 
-    expect(readFileSyncMock).toHaveBeenCalledTimes(1)
-    expect(readFileSyncMock).toHaveBeenCalledWith('/tmp/file.md', 'utf-8')
+    expect(readMarkdownFileMock).toHaveBeenCalledTimes(1)
+    expect(readMarkdownFileMock).toHaveBeenCalledWith('/tmp/file.md')
     expect(renderMarkdownDocumentMock).toHaveBeenCalledTimes(1)
     expect(renderMarkdownDocumentMock).toHaveBeenCalledWith('# Hello')
     expect(client.write).toHaveBeenCalledWith(
@@ -148,7 +147,7 @@ describe('createWatcher', () => {
     watchCallback('change')
     vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)
 
-    expect(readFileSyncMock).not.toHaveBeenCalled()
+    expect(readMarkdownFileMock).not.toHaveBeenCalled()
     expect(renderMarkdownDocumentMock).not.toHaveBeenCalled()
   })
 
@@ -176,7 +175,7 @@ describe('createWatcher', () => {
 
     vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)
 
-    expect(readFileSyncMock).not.toHaveBeenCalled()
+    expect(readMarkdownFileMock).not.toHaveBeenCalled()
     expect(closeMock).toHaveBeenCalledTimes(1)
     expect(client.end).toHaveBeenCalledTimes(1)
   })
@@ -194,7 +193,35 @@ describe('createWatcher', () => {
     watchCallback('change')
     vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)
 
-    expect(readFileSyncMock).not.toHaveBeenCalled()
+    expect(readMarkdownFileMock).not.toHaveBeenCalled()
     expect(client.write).not.toHaveBeenCalled()
+  })
+
+  test('sends a full error update when markdown validation fails after startup', () => {
+    readMarkdownFileMock.mockImplementationOnce(() => {
+      throw new Error('File is too large: /tmp/file.md')
+    })
+
+    const watcher = createWatcher('/tmp/file.md')
+    const client = createMockClient()
+
+    watcher.handleSSE(
+      {} as IncomingMessage,
+      client as unknown as ServerResponse,
+    )
+
+    watchCallback('change')
+    expect(() => vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)).toThrow(
+      'Process exited with code 1',
+    )
+
+    expect(renderMarkdownDocumentMock).not.toHaveBeenCalled()
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'File is too large: /tmp/file.md',
+    )
+    expect(closeMock).toHaveBeenCalledTimes(1)
+    expect(client.write).not.toHaveBeenCalled()
+    expect(client.end).toHaveBeenCalledTimes(1)
+    expect(processExitSpy).toHaveBeenCalledWith(1)
   })
 })

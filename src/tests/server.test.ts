@@ -1,5 +1,5 @@
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import type { Server } from 'node:http'
+import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { type MockInstance } from 'vitest'
@@ -55,6 +55,11 @@ async function withTestServer(
   }
 }
 
+function getRequestHandler(server: Server) {
+  const [handler] = server.listeners('request')
+  return handler as (req: IncomingMessage, res: ServerResponse) => void
+}
+
 describe('createServer', () => {
   test('GET / returns 200 with security headers, CSP with nonce, and matching nonce in HTML', async () => {
     await withTestServer(async (request) => {
@@ -94,6 +99,41 @@ describe('createServer', () => {
         message: 'Cannot GET /some-path',
       })
     })
+  })
+
+  test('GET / logs the render error and exits when rendering fails', () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {})
+    const processExitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((code) => {
+        throw new Error(`Process exited with code ${code}`)
+      })
+    const server = createServer(() => {
+      throw new Error('File is too large: test.md')
+    })
+    const requestHandler = getRequestHandler(server)
+    const req = { method: 'GET', url: '/' } as IncomingMessage
+    const writeHead = vi.fn()
+    const end = vi.fn()
+    const res = {
+      writeHead,
+      end,
+    } as unknown as ServerResponse
+
+    try {
+      expect(() => requestHandler(req, res)).toThrow(
+        'Process exited with code 1',
+      )
+      expect(consoleErrorSpy).toHaveBeenCalledWith('File is too large: test.md')
+      expect(processExitSpy).toHaveBeenCalledWith(1)
+      expect(writeHead).not.toHaveBeenCalled()
+      expect(end).not.toHaveBeenCalled()
+    } finally {
+      processExitSpy.mockRestore()
+      consoleErrorSpy.mockRestore()
+    }
   })
 
   test('GET / with httpsOnly restricts img-src to https: in CSP', async () => {

@@ -1,7 +1,11 @@
 import type { Server } from 'node:http'
 import { dirname } from 'node:path'
 import { config } from './cli/config'
-import { readMarkdownFile, renderMarkdownDocument } from './markdown'
+import {
+  readMarkdownFile,
+  renderMarkdownDocument,
+  validateMarkdownPath,
+} from './markdown'
 import { createServer, startServer } from './server'
 import { prepareHTML } from './template'
 import { resolvePath } from './utils/path-validation'
@@ -25,6 +29,7 @@ function setupShutdownHandlers(server: Server, cleanup: () => void) {
 
 export function run(userPath: string) {
   const fullPath = resolvePath(userPath)
+  validateMarkdownPath(fullPath)
 
   const watcher = config.watch ? createWatcher(fullPath) : null
 

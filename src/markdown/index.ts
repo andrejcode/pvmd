@@ -89,9 +89,13 @@ function readFile(path: string): string {
   }
 }
 
-export function readMarkdownFile(path: string): string {
+export function validateMarkdownPath(path: string): void {
   validateFile(path)
   validateMarkdownExtension(path)
+}
+
+export function readMarkdownFile(path: string): string {
+  validateMarkdownPath(path)
 
   return readFile(path)
 }

@@ -14,6 +14,9 @@ function prefix(name, color) {
   return `${colors[color]}[${name}]${colors.reset} `
 }
 
+let isCleaningUp = false
+let finalExitCode = 0
+
 const client = spawn('node', ['esbuild.client.dev.js'], {
   stdio: 'pipe',
   env: { ...process.env },
@@ -56,23 +59,29 @@ app.stderr.on('data', (data) => {
   })
 })
 
-function cleanup() {
+function cleanup(exitCode = 0) {
+  if (isCleaningUp) {
+    return
+  }
+
+  isCleaningUp = true
+  finalExitCode = exitCode
   client.kill('SIGINT')
   app.kill('SIGINT')
   setTimeout(() => {
-    process.exit(0)
+    process.exit(finalExitCode)
   }, 1000)
 }
 
-process.on('SIGINT', cleanup)
-process.on('SIGTERM', cleanup)
+process.on('SIGINT', () => cleanup(0))
+process.on('SIGTERM', () => cleanup(0))
 
 client.on('exit', (code) => {
   console.error(prefix('client', 'cyan') + `Process exited with code ${code}`)
-  cleanup()
+  cleanup(code ?? 0)
 })
 
 app.on('exit', (code) => {
   console.error(prefix('app', 'green') + `Process exited with code ${code}`)
-  cleanup()
+  cleanup(code ?? 0)
 })

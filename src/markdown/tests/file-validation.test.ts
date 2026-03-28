@@ -127,7 +127,7 @@ describe('validateFile', () => {
       size: threeMB,
     })
     expect(() => validateFile('test.md')).toThrow(
-      'File is too large: test.md. Maximum size is 2 MB',
+      'File is too large: test.md. Maximum size is 2 MB.\nUse --no-size-check to disable file size validation or --max-size <mb> to raise the limit.',
     )
   })
 
@@ -151,7 +151,7 @@ describe('validateFile', () => {
       size: justOverTwoMB,
     })
     expect(() => validateFile('test.md')).toThrow(
-      'File is too large: test.md. Maximum size is 2 MB',
+      'File is too large: test.md. Maximum size is 2 MB.\nUse --no-size-check to disable file size validation or --max-size <mb> to raise the limit.',
     )
   })
 
@@ -189,7 +189,21 @@ describe('validateFile', () => {
       size: sixMB,
     })
     expect(() => validateFile('test.md')).toThrow(
-      'File is too large: test.md. Maximum size is 5 MB',
+      'File is too large: test.md. Maximum size is 5 MB.\nUse --no-size-check to disable file size validation or --max-size <mb> to raise the limit.',
+    )
+  })
+
+  test('should format tiny maxFileSizeMB values without scientific notation', () => {
+    config.maxFileSizeMB = 0.00000001
+    mockStats({
+      isDirectory: false,
+      isFile: true,
+      isSymbolicLink: false,
+      size: 1,
+    })
+
+    expect(() => validateFile('test.md')).toThrow(
+      'File is too large: test.md. Maximum size is 0.00000001 MB.\nUse --no-size-check to disable file size validation or --max-size <mb> to raise the limit.',
     )
   })
 

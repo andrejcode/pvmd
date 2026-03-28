@@ -14,6 +14,15 @@ const VALID_MARKDOWN_EXTENSIONS: readonly string[] = [
   '.mdtext',
 ] as const
 
+const FILE_SIZE_FORMATTER = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 20,
+  useGrouping: false,
+})
+
+function formatMaxFileSizeMB(sizeInMB: number): string {
+  return FILE_SIZE_FORMATTER.format(sizeInMB)
+}
+
 export function validateMarkdownExtension(path: string): void {
   const extension = extname(path).toLowerCase()
 
@@ -46,10 +55,11 @@ export function validateFile(path: string): void {
 
   if (!config.skipSizeCheck) {
     const maxFileSizeBytes = config.maxFileSizeMB * 1024 * 1024
+    const maxFileSizeLabel = formatMaxFileSizeMB(config.maxFileSizeMB)
 
     if (stats.size > maxFileSizeBytes) {
       throw new Error(
-        `File is too large: ${path}. Maximum size is ${config.maxFileSizeMB} MB`,
+        `File is too large: ${path}. Maximum size is ${maxFileSizeLabel} MB.\nUse --no-size-check to disable file size validation or --max-size <mb> to raise the limit.`,
       )
     }
   }

@@ -6,6 +6,7 @@ import {
   type ServerResponse,
 } from 'node:http'
 import { config } from './cli/config'
+import { exitWithError } from './utils/fatal-error'
 import { resolveStaticFile } from './utils/static-file'
 
 type RequestHandler = (req: IncomingMessage, res: ServerResponse) => void
@@ -110,17 +111,21 @@ export function createServer(
 ): Server {
   return createHttpServer((req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'GET' && req.url === '/') {
-      const html = applyBodyDataAttributes(getHTML())
-      const nonce = generateNonce()
-      const htmlWithNonce = applyNonce(html, nonce)
-      const csp = buildCSPHeader(nonce)
+      try {
+        const html = applyBodyDataAttributes(getHTML())
+        const nonce = generateNonce()
+        const htmlWithNonce = applyNonce(html, nonce)
+        const csp = buildCSPHeader(nonce)
 
-      res.writeHead(200, {
-        'content-type': 'text/html',
-        'content-security-policy': csp,
-        ...SECURITY_HEADERS,
-      })
-      res.end(htmlWithNonce)
+        res.writeHead(200, {
+          'content-type': 'text/html',
+          'content-security-policy': csp,
+          ...SECURITY_HEADERS,
+        })
+        res.end(htmlWithNonce)
+      } catch (error) {
+        exitWithError(error)
+      }
     } else if (req.method === 'GET' && req.url === '/events' && handleSSE) {
       handleSSE(req, res)
     } else if (req.method === 'GET' && req.url && baseDir) {
@@ -134,10 +139,9 @@ export function createServer(
 export function startServer(server: Server) {
   server.on('error', (error: NodeJS.ErrnoException) => {
     if (error.code === 'EADDRINUSE') {
-      console.error(
+      exitWithError(
         `Port ${config.port} is already in use. Please use a different port.`,
       )
-      process.exit(1)
     }
     throw error
   })

@@ -1,8 +1,8 @@
-import { watch, readFileSync } from 'node:fs'
+import { watch } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { renderMarkdownDocument } from '@/markdown'
+import { readMarkdownFile, renderMarkdownDocument } from '@/markdown'
 import type { LiveUpdateDocument } from '@/shared/live-update'
-import { processFileSystemError } from '@/utils/file-error'
+import { exitWithError } from '@/utils/fatal-error'
 import { createLiveUpdateMessage } from './patch-diff'
 
 export default function createWatcher(path: string) {
@@ -20,13 +20,26 @@ export default function createWatcher(path: string) {
     reloadTimer = null
   }
 
+  function exitOnWatcherError(error: unknown): never {
+    cancelScheduledReload()
+    watcher.close()
+
+    for (const client of clients) {
+      if (!client.writableEnded) {
+        client.end()
+      }
+    }
+
+    exitWithError(error)
+  }
+
   function broadcastUpdate() {
     if (clients.size === 0) {
       return
     }
 
     try {
-      const content = readFileSync(path, 'utf-8')
+      const content = readMarkdownFile(path)
       const nextDocument = renderMarkdownDocument(content)
       const message = createLiveUpdateMessage(previousDocument, nextDocument)
 
@@ -44,7 +57,7 @@ export default function createWatcher(path: string) {
         }
       }
     } catch (error) {
-      throw new Error(processFileSystemError(error, path))
+      exitOnWatcherError(error)
     }
   }
 
@@ -76,10 +89,9 @@ export default function createWatcher(path: string) {
 
   const watcher = watch(path, (event) => {
     if (event === 'rename') {
-      console.error(`File ${path} was renamed or deleted. Exiting.`)
       cancelScheduledReload()
       watcher.close()
-      process.exit(1)
+      exitWithError(`File ${path} was renamed or deleted. Exiting.`)
     }
 
     scheduleReload()
