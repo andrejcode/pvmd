@@ -1,8 +1,6 @@
 # pvmd
 
-`pvmd` is a terminal-first Markdown previewer for local files with GitHub-style rendering. It renders a Markdown document, serves it on `127.0.0.1`, and opens a lightweight browser view with optional live updates.
-
-It is designed for fast local previewing with a simple runtime model: one CLI command, one local server, and one browser client. GitHub-style rendering is a key benefit for README and documentation workflows, but the main goal is quick, reliable previewing of Markdown from the terminal. The latest live-update pipeline uses block-level patching so large documents can refresh without replacing the full page.
+`pvmd` is a terminal-first Markdown previewer for local files that turns a Markdown document into a polished local preview from a single command. It serves your file on `127.0.0.1` in a GitHub-style view, keeps the workflow straightforward, and stays responsive as you edit so you can review, refine, and publish Markdown with less friction.
 
 ## Table of Contents
 
