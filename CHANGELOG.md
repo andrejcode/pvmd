@@ -2,13 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.1 - 2026-03-29
+
+### Fixed
+
+- Prevented the browser client from starting live-update EventSource connections or showing reconnect UI when previews are launched with `--no-watch`.
+- Improved oversized file validation errors with clearer guidance for `--no-size-check` and `--max-size`, including more readable formatting for very small size limits.
+- Enforced markdown file validation earlier in startup and during watcher-driven refreshes so invalid paths and late file changes fail consistently.
+- Treated render-time validation failures as fatal CLI errors so invalid markdown input exits consistently.
+
 ## 0.2.0 - 2026-03-27
 
 ### Added
 
 - Block-level live updates that patch only changed markdown sections in the browser instead of replacing the full document.
 - Stable DOM block wrappers and patch operations for incremental browser updates over Server-Sent Events.
-- Regression coverage for incremental markdown rendering, including syntax highlighting, alerts, heading anchors, KaTeX, and footnotes.
 
 ### Changed
 

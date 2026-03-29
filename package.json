@@ -1,6 +1,6 @@
 {
   "name": "@andrejcode/pvmd",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Terminal-launched Markdown previewer that renders in the browser with live reload and GitHub-style rendering.",
   "license": "MIT",
   "author": "Andrej Milanović",
