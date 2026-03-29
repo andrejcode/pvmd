@@ -4,13 +4,20 @@ import createWatcher from '..'
 
 // Mirrors the function-scoped debounceMs in createWatcher.
 const WATCH_DEBOUNCE_MS = 200
+const RENAME_RETRY_DELAY_MS = 50
+const RENAME_RETRY_LIMIT = 10
 
-const { watchMock, readMarkdownFileMock, renderMarkdownDocumentMock } =
-  vi.hoisted(() => ({
-    watchMock: vi.fn(),
-    readMarkdownFileMock: vi.fn(),
-    renderMarkdownDocumentMock: vi.fn(),
-  }))
+const {
+  watchMock,
+  readMarkdownFileMock,
+  renderMarkdownDocumentMock,
+  validateMarkdownPathMock,
+} = vi.hoisted(() => ({
+  watchMock: vi.fn(),
+  readMarkdownFileMock: vi.fn(),
+  renderMarkdownDocumentMock: vi.fn(),
+  validateMarkdownPathMock: vi.fn(),
+}))
 
 vi.mock('node:fs', () => ({
   watch: watchMock,
@@ -19,6 +26,7 @@ vi.mock('node:fs', () => ({
 vi.mock('../../markdown', () => ({
   readMarkdownFile: readMarkdownFileMock,
   renderMarkdownDocument: renderMarkdownDocumentMock,
+  validateMarkdownPath: validateMarkdownPathMock,
 }))
 
 type WatchEvent = 'change' | 'rename'
@@ -47,16 +55,18 @@ function createMockClient() {
 
 describe('createWatcher', () => {
   let watchCallback: WatchCallback
-  let closeMock: ReturnType<typeof vi.fn>
+  let closeMocks: Array<ReturnType<typeof vi.fn>>
   let processExitSpy: MockInstance
   let consoleErrorSpy: MockInstance
 
   beforeEach(() => {
     vi.useFakeTimers()
 
-    closeMock = vi.fn()
+    closeMocks = []
     watchMock.mockImplementation((_path: string, callback: WatchCallback) => {
       watchCallback = callback
+      const closeMock = vi.fn()
+      closeMocks.push(closeMock)
       return { close: closeMock }
     })
 
@@ -65,6 +75,7 @@ describe('createWatcher', () => {
       blocks: [{ id: 'block-1', html: '<h1>Hello</h1>' }],
       html: '<div data-pvmd-block-id="block-1"><h1>Hello</h1></div>',
     })
+    validateMarkdownPathMock.mockReturnValue(undefined)
 
     processExitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new Error(`Process exited with code ${code}`)
@@ -79,6 +90,7 @@ describe('createWatcher', () => {
     watchMock.mockReset()
     readMarkdownFileMock.mockReset()
     renderMarkdownDocumentMock.mockReset()
+    validateMarkdownPathMock.mockReset()
   })
 
   test('debounces rapid change events into a single reload', () => {
@@ -151,15 +163,47 @@ describe('createWatcher', () => {
     expect(renderMarkdownDocumentMock).not.toHaveBeenCalled()
   })
 
-  test('rename closes the watcher and exits immediately', () => {
+  test('rename reattaches the watcher when the same path becomes valid again', () => {
+    const watcher = createWatcher('/tmp/file.md')
+    const client = createMockClient()
+
+    watcher.handleSSE(
+      {} as IncomingMessage,
+      client as unknown as ServerResponse,
+    )
+
+    watchCallback('rename')
+
+    expect(validateMarkdownPathMock).toHaveBeenCalledWith('/tmp/file.md')
+    expect(watchMock).toHaveBeenCalledTimes(2)
+    expect(closeMocks[0]).toHaveBeenCalledTimes(1)
+    expect(processExitSpy).not.toHaveBeenCalled()
+
+    watchCallback('change')
+    vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)
+
+    expect(readMarkdownFileMock).toHaveBeenCalledWith('/tmp/file.md')
+    expect(client.write).toHaveBeenCalledTimes(1)
+  })
+
+  test('rename exits after retries when the original path no longer validates', () => {
+    validateMarkdownPathMock.mockImplementation(() => {
+      throw new Error('No such file or directory: /tmp/file.md')
+    })
+
     createWatcher('/tmp/file.md')
 
-    expect(() => watchCallback('rename')).toThrow('Process exited with code 1')
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'File /tmp/file.md was renamed or deleted. Exiting.',
-    )
-    expect(closeMock).toHaveBeenCalledTimes(1)
+    watchCallback('rename')
+
+    expect(() =>
+      vi.advanceTimersByTime(RENAME_RETRY_DELAY_MS * (RENAME_RETRY_LIMIT - 1)),
+    ).toThrow('Process exited with code 1')
+    expect(validateMarkdownPathMock).toHaveBeenCalledTimes(RENAME_RETRY_LIMIT)
+    expect(closeMocks[0]).toHaveBeenCalledTimes(1)
     expect(processExitSpy).toHaveBeenCalledWith(1)
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'No such file or directory: /tmp/file.md',
+    )
   })
 
   test('cleanup cancels pending reloads and closes connected clients', () => {
@@ -176,7 +220,7 @@ describe('createWatcher', () => {
     vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)
 
     expect(readMarkdownFileMock).not.toHaveBeenCalled()
-    expect(closeMock).toHaveBeenCalledTimes(1)
+    expect(closeMocks[0]).toHaveBeenCalledTimes(1)
     expect(client.end).toHaveBeenCalledTimes(1)
   })
 
@@ -219,7 +263,7 @@ describe('createWatcher', () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'File is too large: /tmp/file.md',
     )
-    expect(closeMock).toHaveBeenCalledTimes(1)
+    expect(closeMocks[0]).toHaveBeenCalledTimes(1)
     expect(client.write).not.toHaveBeenCalled()
     expect(client.end).toHaveBeenCalledTimes(1)
     expect(processExitSpy).toHaveBeenCalledWith(1)

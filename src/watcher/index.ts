@@ -1,15 +1,24 @@
-import { watch } from 'node:fs'
+import { watch, type FSWatcher } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readMarkdownFile, renderMarkdownDocument } from '@/markdown'
+import {
+  readMarkdownFile,
+  renderMarkdownDocument,
+  validateMarkdownPath,
+} from '@/markdown'
 import type { LiveUpdateDocument } from '@/shared/live-update'
 import { exitWithError } from '@/utils/fatal-error'
 import { createLiveUpdateMessage } from './patch-diff'
 
 export default function createWatcher(path: string) {
   const debounceMs = 200
+  const renameRetryDelayMs = 50
+  const renameRetryLimit = 10
   const clients = new Set<ServerResponse>()
   let reloadTimer: ReturnType<typeof setTimeout> | null = null
+  let renameRetryTimer: ReturnType<typeof setTimeout> | null = null
   let previousDocument: LiveUpdateDocument | null = null
+  let watcher: FSWatcher | null = null
+  let isClosed = false
 
   function cancelScheduledReload() {
     if (!reloadTimer) {
@@ -20,15 +29,34 @@ export default function createWatcher(path: string) {
     reloadTimer = null
   }
 
-  function exitOnWatcherError(error: unknown): never {
-    cancelScheduledReload()
-    watcher.close()
+  function cancelRenameRetry() {
+    if (!renameRetryTimer) {
+      return
+    }
 
+    clearTimeout(renameRetryTimer)
+    renameRetryTimer = null
+  }
+
+  function closeWatcher() {
+    watcher?.close()
+    watcher = null
+  }
+
+  function closeClients() {
     for (const client of clients) {
       if (!client.writableEnded) {
         client.end()
       }
     }
+  }
+
+  function exitOnWatcherError(error: unknown): never {
+    cancelScheduledReload()
+    cancelRenameRetry()
+    isClosed = true
+    closeWatcher()
+    closeClients()
 
     exitWithError(error)
   }
@@ -73,6 +101,46 @@ export default function createWatcher(path: string) {
     }, debounceMs)
   }
 
+  function attachWatcher() {
+    if (isClosed) {
+      return
+    }
+
+    watcher = watch(path, handleWatchEvent)
+  }
+
+  function recoverWatcher(attempt: number) {
+    if (isClosed) {
+      return
+    }
+
+    try {
+      validateMarkdownPath(path)
+      attachWatcher()
+      scheduleReload()
+    } catch (error) {
+      if (attempt >= renameRetryLimit - 1) {
+        exitOnWatcherError(error)
+      }
+
+      renameRetryTimer = setTimeout(() => {
+        renameRetryTimer = null
+        recoverWatcher(attempt + 1)
+      }, renameRetryDelayMs)
+    }
+  }
+
+  function handleWatchEvent(event: 'rename' | 'change') {
+    if (event === 'rename') {
+      cancelScheduledReload()
+      closeWatcher()
+      recoverWatcher(0)
+      return
+    }
+
+    scheduleReload()
+  }
+
   function handleSSE(_req: IncomingMessage, res: ServerResponse) {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -87,26 +155,16 @@ export default function createWatcher(path: string) {
     })
   }
 
-  const watcher = watch(path, (event) => {
-    if (event === 'rename') {
-      cancelScheduledReload()
-      watcher.close()
-      exitWithError(`File ${path} was renamed or deleted. Exiting.`)
-    }
-
-    scheduleReload()
-  })
+  attachWatcher()
 
   return {
     handleSSE,
     cleanup: () => {
       cancelScheduledReload()
-      watcher.close()
-      for (const client of clients) {
-        if (!client.writableEnded) {
-          client.end()
-        }
-      }
+      cancelRenameRetry()
+      isClosed = true
+      closeWatcher()
+      closeClients()
       clients.clear()
     },
   }
