@@ -249,9 +249,32 @@ describe('startServer', () => {
     })
 
     await vi.waitFor(() => {
-      expect(open).toHaveBeenCalledWith(getServerUrl(config.port))
+      expect(open).toHaveBeenCalledWith(
+        expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/$/),
+      )
     })
 
+    expect(open).not.toHaveBeenCalledWith(getServerUrl(0))
+
+    server.close()
+  })
+
+  test('logs the actual bound port when config.port is 0', async () => {
+    config.open = false
+    const server = createServer(() => HTML_WITH_APP_SCRIPT)
+    startServer(server)
+
+    await vi.waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /^Server running at http:\/\/127\.0\.0\.1:\d+\/$/,
+        ),
+      )
+    })
+
+    expect(consoleSpy).not.toHaveBeenCalledWith(
+      'Server running at http://127.0.0.1:0/',
+    )
     server.close()
   })
 
@@ -269,6 +292,42 @@ describe('startServer', () => {
 
     expect(open).not.toHaveBeenCalled()
     server.close()
+  })
+
+  test('prints a friendly error when binding to a restricted port is denied', () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {})
+    const processExitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((code) => {
+        throw new Error(`Process exited with code ${code}`)
+      })
+
+    config.port = 80
+    const server = createServer(() => HTML_WITH_APP_SCRIPT)
+    vi.spyOn(server, 'listen').mockImplementation(() => server)
+    startServer(server)
+
+    try {
+      expect(() => {
+        server.emit(
+          'error',
+          Object.assign(new Error('listen EACCES'), {
+            code: 'EACCES',
+            port: 80,
+          }),
+        )
+      }).toThrow('Process exited with code 1')
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Permission denied while binding to port 80 on 127.0.0.1. Ports below 1024 often require elevated permissions and may be reserved by the system or browser. Try a higher port such as 8765.',
+      )
+      expect(processExitSpy).toHaveBeenCalledWith(1)
+    } finally {
+      processExitSpy.mockRestore()
+      consoleErrorSpy.mockRestore()
+    }
   })
 })
 

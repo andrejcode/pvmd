@@ -78,9 +78,30 @@ describe('parseArguments', () => {
       expect(config.port).toBe(8080)
     })
 
-    test('should throw an error if port number is not valid', () => {
-      expect(() => parseArguments(['test.md', '--port', '0'])).toThrow(
-        'Port must be between 1024 and 49151',
+    test('should allow port 0 to request a random available port', () => {
+      parseArguments(['test.md', '--port', '0'])
+      expect(config.port).toBe(0)
+    })
+
+    test('should throw an error if port number is out of range', () => {
+      expect(() => parseArguments(['test.md', '--port', '-1'])).toThrow(
+        'Port must be between 0 and 65535',
+      )
+
+      expect(() => parseArguments(['test.md', '--port', '70000'])).toThrow(
+        'Port must be between 0 and 65535',
+      )
+    })
+
+    test('should throw an error if port number is not an integer', () => {
+      expect(() => parseArguments(['test.md', '--port', '1234.5'])).toThrow(
+        'Port must be an integer',
+      )
+    })
+
+    test('should throw an error if port is blocked by browsers', () => {
+      expect(() => parseArguments(['test.md', '--port', '6000'])).toThrow(
+        'Port 6000 is blocked by browsers for security reasons. Please choose a different port.',
       )
     })
 

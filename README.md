@@ -71,7 +71,7 @@ pvmd --no-watch ./docs/guide.md
 ## CLI Options
 
 ```text
--p, --port <port>       Port number (default: 8765)
+-p, --port <port>       Port number (default: 8765; use 0 for a random port)
 --no-size-check         Skip file size validation
 --max-size <mb>         Maximum file size in MB (default: 2)
 --no-watch              Skip file watching
@@ -103,6 +103,8 @@ The server can also serve local image files referenced by the Markdown document.
 The project favors explicit, user-readable failure modes. Common file-system issues such as missing files, permission errors, directories passed as files, symbolic links, invalid file types, null bytes, or oversized inputs are converted into direct error messages rather than low-level Node.js output.
 
 Server startup errors are handled the same way. If the selected port is already in use, `pvmd` prints a custom message explaining how to recover.
+
+`pvmd` also validates port choices before startup. Port `0` is supported to request a random available local port, while browser-blocked ports such as `6000` or `6667` are rejected up front with a direct error because browsers refuse to open them.
 
 ## Security
 

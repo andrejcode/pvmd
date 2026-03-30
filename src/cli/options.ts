@@ -1,5 +1,15 @@
 import { config } from './config'
 
+// Browsers intentionally refuse to navigate to certain ports to prevent
+// cross-protocol attacks against well-known services.
+const BROWSER_UNSAFE_PORTS = new Set<number>([
+  1, 7, 9, 11, 13, 15, 17, 19, 20, 21, 22, 23, 25, 37, 42, 43, 53, 77, 79, 87,
+  95, 101, 102, 103, 104, 109, 110, 111, 113, 115, 117, 119, 123, 135, 137, 139,
+  143, 161, 179, 389, 427, 465, 512, 513, 514, 515, 526, 530, 531, 532, 540,
+  548, 554, 556, 563, 587, 601, 636, 989, 990, 993, 995, 1719, 1720, 1723, 2049,
+  3659, 4045, 5060, 5061, 6000, 6566, 6665, 6666, 6667, 6668, 6669, 6697, 10080,
+])
+
 interface Option {
   alias?: string
   description: string
@@ -11,7 +21,7 @@ interface Option {
 const options: Record<string, Option> = {
   port: {
     alias: 'p',
-    description: `Port number (default: ${config.port})`,
+    description: `Port number (default: ${config.port}; use 0 for a random available port)`,
     value: '<port>',
     takesValue: true,
     action: (value?: string) => {
@@ -20,8 +30,22 @@ const options: Record<string, Option> = {
       }
 
       const parsed = Number(value)
-      if (isNaN(parsed) || parsed < 1024 || parsed > 49151) {
-        throw new Error('Port must be between 1024 and 49151')
+      if (isNaN(parsed)) {
+        throw new Error('Port must be a number')
+      }
+
+      if (!Number.isInteger(parsed)) {
+        throw new Error('Port must be an integer')
+      }
+
+      if (parsed < 0 || parsed > 65535) {
+        throw new Error('Port must be between 0 and 65535')
+      }
+
+      if (parsed !== 0 && BROWSER_UNSAFE_PORTS.has(parsed)) {
+        throw new Error(
+          `Port ${parsed} is blocked by browsers for security reasons. Please choose a different port.`,
+        )
       }
 
       config.port = parsed

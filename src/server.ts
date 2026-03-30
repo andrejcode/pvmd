@@ -104,6 +104,15 @@ function serveStaticFile(
   }
 }
 
+function getErrorPort(error: NodeJS.ErrnoException): number | null {
+  if (!('port' in error)) {
+    return null
+  }
+
+  const { port } = error as NodeJS.ErrnoException & { port?: unknown }
+  return typeof port === 'number' ? port : null
+}
+
 export function createServer(
   getHTML: () => string,
   handleSSE?: RequestHandler,
@@ -143,11 +152,30 @@ export function startServer(server: Server) {
         `Port ${config.port} is already in use. Please use a different port.`,
       )
     }
+
+    if (error.code === 'EACCES') {
+      const port = getErrorPort(error) ?? config.port
+      const lowPortHint =
+        port < 1024
+          ? 'Ports below 1024 often require elevated permissions and may be reserved by the system or browser. Try a higher port such as 8765.'
+          : 'Please choose a different port.'
+
+      exitWithError(
+        `Permission denied while binding to port ${port} on 127.0.0.1. ${lowPortHint}`,
+      )
+    }
+
     throw error
   })
 
   server.listen(config.port, '127.0.0.1', () => {
-    const url = `http://127.0.0.1:${config.port}/`
+    const address = server.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Unable to determine server address after startup')
+    }
+
+    const url = `http://127.0.0.1:${address.port}/`
     console.log(`Server running at ${url}`)
 
     if (config.open) {
