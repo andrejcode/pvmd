@@ -116,11 +116,23 @@ describe('injectTitle', () => {
 
   test('should handle special characters in title', () => {
     const template = HTML_WITH_TITLE_OUTLET
-    const title = 'Document & <Special> Characters'
+    const title = 'Document & <Special> "Characters"'
 
     const result = injectTitle(template, title)
 
-    expect(result).toContain('<title>Document & <Special> Characters</title>')
+    expect(result).toContain(
+      '<title>Document &amp; &lt;Special&gt; &quot;Characters&quot;</title>',
+    )
+    expect(result).not.toContain('<Special>')
+  })
+
+  test('should escape apostrophes in title', () => {
+    const template = HTML_WITH_TITLE_OUTLET
+    const title = "Andrej's Notes"
+
+    const result = injectTitle(template, title)
+
+    expect(result).toContain('<title>Andrej&#39;s Notes</title>')
   })
 })
 
@@ -171,5 +183,19 @@ describe('prepareHTML', () => {
 
     expect(result).toContain('<title>README.md</title>')
     expect(result).toContain('<p>Readme content</p>')
+  })
+
+  test('should escape special characters in basename-derived title', () => {
+    const result = prepareHTML(
+      '/deep/nested/path/Document & <Special> "Name".md',
+      '<p>Content</p>',
+    )
+
+    expect(result).toContain(
+      '<title>Document &amp; &lt;Special&gt; &quot;Name&quot;.md</title>',
+    )
+    expect(result).not.toContain(
+      '<title>Document & <Special> "Name".md</title>',
+    )
   })
 })

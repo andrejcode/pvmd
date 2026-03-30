@@ -1,6 +1,14 @@
 import { readFileSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
 
+const HTML_ESCAPE_LOOKUP: Readonly<Record<string, string>> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
+
 export function readHTMLTemplate(): string {
   try {
     // In development mode, read from the dev build directory
@@ -26,7 +34,12 @@ export function injectTitle(template: string, title: string): string {
     )
   }
 
-  return template.replace('<!-- TITLE_OUTLET -->', `<title>${title}</title>`)
+  const escapedTitle = escapeHtmlText(title)
+
+  return template.replace(
+    '<!-- TITLE_OUTLET -->',
+    `<title>${escapedTitle}</title>`,
+  )
 }
 
 export function injectMarkdown(template: string, markdown: string): string {
@@ -55,4 +68,11 @@ export function prepareHTML(
   }
 
   return injectMarkdown(htmlTemplateWithTitle || htmlTemplate, parsedMarkdown)
+}
+
+function escapeHtmlText(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (character) => HTML_ESCAPE_LOOKUP[character]!,
+  )
 }
