@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.2 - 2026-03-30
+
+### Fixed
+
+- Improved watcher rename handling so atomic-save editors such as Vim and Neovim no longer terminate the preview when they replace the file during save.
+- Added retry-based watcher recovery that reattaches to the same markdown path after transient rename events instead of treating every rename as a permanent deletion.
+- Kept live reload validation strict during watcher recovery by revalidating the original path before reattaching and before rereading file contents, so renamed, missing, or invalid targets still fail safely.
+- Escaped markdown preview page titles before injecting the source file name into the HTML template, preventing file names with HTML-special characters from introducing markup into the document head.
+- Validated CLI port values before server startup, allowing port `0` for OS-assigned random ports while replacing Node's raw out-of-range error with a direct `0` to `65535` validation message.
+- Rejected browser-unsafe ports such as `6000` and `6667` up front so the CLI fails with a clear message instead of letting the browser refuse the preview URL later.
+- Used the actual bound port in startup logs and browser auto-open URLs so `--port 0` opens the assigned preview address instead of `127.0.0.1:0`.
+- Replaced raw permission-denied startup crashes on restricted ports with a friendlier message that explains low-port permission requirements and suggests using a higher port.
+
 ## 0.2.1 - 2026-03-29
 
 ### Fixed
