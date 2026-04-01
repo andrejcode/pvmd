@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { type MockInstance } from 'vitest'
 import { config } from '@/cli/config'
-import { createServer, startServer } from '../server'
+import { createServer, openServerUrl, startServer } from '../server'
 
 vi.mock('open', () => ({
   default: vi.fn(() => Promise.resolve()),
@@ -234,6 +234,23 @@ describe('startServer', () => {
     consoleSpy.mockRestore()
     config.open = false
     config.port = savedPort
+  })
+
+  test('warns with the preview URL when browser auto-open fails', async () => {
+    const open = (await import('open')).default as ReturnType<typeof vi.fn>
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    open.mockRejectedValueOnce(new Error('launch failed'))
+
+    try {
+      await openServerUrl('http://127.0.0.1:3000/')
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Failed to open the browser automatically. Open this URL manually: http://127.0.0.1:3000/',
+      )
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 
   test('calls open with server URL when config.open is true', async () => {

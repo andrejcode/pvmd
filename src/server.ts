@@ -113,6 +113,16 @@ function getErrorPort(error: NodeJS.ErrnoException): number | null {
   return typeof port === 'number' ? port : null
 }
 
+export async function openServerUrl(url: string): Promise<void> {
+  try {
+    await import('open').then(({ default: open }) => open(url))
+  } catch {
+    console.warn(
+      `Failed to open the browser automatically. Open this URL manually: ${url}`,
+    )
+  }
+}
+
 export function createServer(
   getHTML: () => string,
   handleSSE?: RequestHandler,
@@ -179,7 +189,7 @@ export function startServer(server: Server) {
     console.log(`Server running at ${url}`)
 
     if (config.open) {
-      void import('open').then(({ default: open }) => open(url))
+      void openServerUrl(url)
     }
   })
 }
