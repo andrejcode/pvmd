@@ -3,10 +3,11 @@ import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { type MockInstance } from 'vitest'
-import { config } from '@/cli/config'
-import { createServer, openServerUrl, startServer } from '../server'
+import { config, DEFAULT_CONFIG } from '@/cli/config'
+import openPreviewInBrowser from '../open-browser'
+import { createServer, startServer } from '../server'
 
-vi.mock('open', () => ({
+vi.mock('../open-browser', () => ({
   default: vi.fn(() => Promise.resolve()),
 }))
 
@@ -239,37 +240,23 @@ describe('startServer', () => {
   beforeEach(() => {
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     savedPort = config.port
+    Object.assign(config, DEFAULT_CONFIG)
     config.port = 0
   })
 
   afterEach(() => {
     consoleSpy.mockRestore()
-    config.open = false
+    Object.assign(config, DEFAULT_CONFIG)
     config.port = savedPort
   })
 
-  test('warns with the preview URL when browser auto-open fails', async () => {
-    const open = (await import('open')).default as ReturnType<typeof vi.fn>
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    open.mockRejectedValueOnce(new Error('launch failed'))
-
-    try {
-      await openServerUrl('http://127.0.0.1:3000/')
-
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Failed to open the browser automatically. Open this URL manually: http://127.0.0.1:3000/',
-      )
-    } finally {
-      warnSpy.mockRestore()
-    }
-  })
-
   test('calls open with server URL when config.open is true', async () => {
-    const open = (await import('open')).default as ReturnType<typeof vi.fn>
-    open.mockClear()
+    const openPreviewInBrowserMock =
+      openPreviewInBrowser as unknown as ReturnType<typeof vi.fn>
+    openPreviewInBrowserMock.mockClear()
 
     config.open = true
+    config.browser = 'firefox'
     const server = createServer(() => HTML_WITH_APP_SCRIPT)
     startServer(server)
 
@@ -278,12 +265,12 @@ describe('startServer', () => {
     })
 
     await vi.waitFor(() => {
-      expect(open).toHaveBeenCalledWith(
+      expect(openPreviewInBrowserMock).toHaveBeenCalledWith(
         expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/$/),
       )
     })
 
-    expect(open).not.toHaveBeenCalledWith(getServerUrl(0))
+    expect(openPreviewInBrowserMock).not.toHaveBeenCalledWith(getServerUrl(0))
 
     server.close()
   })
@@ -295,21 +282,20 @@ describe('startServer', () => {
 
     await vi.waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringMatching(
-          /^Server running at http:\/\/127\.0\.0\.1:\d+\/$/,
-        ),
+        expect.stringMatching(/^Preview ready at http:\/\/127\.0\.0\.1:\d+\/$/),
       )
     })
 
     expect(consoleSpy).not.toHaveBeenCalledWith(
-      'Server running at http://127.0.0.1:0/',
+      'Preview ready at http://127.0.0.1:0/',
     )
     server.close()
   })
 
   test('does not call open when config.open is false', async () => {
-    const open = (await import('open')).default as ReturnType<typeof vi.fn>
-    open.mockClear()
+    const openPreviewInBrowserMock =
+      openPreviewInBrowser as unknown as ReturnType<typeof vi.fn>
+    openPreviewInBrowserMock.mockClear()
 
     config.open = false
     const server = createServer(() => HTML_WITH_APP_SCRIPT)
@@ -319,7 +305,7 @@ describe('startServer', () => {
       expect(consoleSpy).toHaveBeenCalled()
     })
 
-    expect(open).not.toHaveBeenCalled()
+    expect(openPreviewInBrowserMock).not.toHaveBeenCalled()
     server.close()
   })
 

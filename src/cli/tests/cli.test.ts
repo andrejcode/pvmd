@@ -1,5 +1,5 @@
 import { type MockInstance } from 'vitest'
-import { config } from '../config'
+import { config, DEFAULT_CONFIG } from '../config'
 import { parseArguments } from '../index'
 
 describe('parseArguments', () => {
@@ -7,6 +7,7 @@ describe('parseArguments', () => {
   let processExitSpy: MockInstance
 
   beforeEach(() => {
+    Object.assign(config, DEFAULT_CONFIG)
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     processExitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new Error(`Process exited with code ${code}`)
@@ -133,6 +134,35 @@ describe('parseArguments', () => {
     test('should set config.open to true when -o is provided', () => {
       parseArguments(['test.md', '-o'])
       expect(config.open).toBe(true)
+    })
+  })
+
+  describe('browser option', () => {
+    test('should set config.browser when --browser is provided', () => {
+      parseArguments(['test.md', '--browser', 'chrome'])
+      expect(config.browser).toBe('chrome')
+    })
+
+    test('should set config.browser when -b is provided', () => {
+      parseArguments(['test.md', '-b', 'firefox'])
+      expect(config.browser).toBe('firefox')
+    })
+
+    test('should normalize browser values to lowercase', () => {
+      parseArguments(['test.md', '--browser', 'BrAvE'])
+      expect(config.browser).toBe('brave')
+    })
+
+    test('should throw an error if browser value is not provided', () => {
+      expect(() => parseArguments(['test.md', '--browser'])).toThrow(
+        'Browser option requires a value. Supported browsers: default, chrome, firefox, edge, brave.',
+      )
+    })
+
+    test('should throw an error if browser is unsupported', () => {
+      expect(() => parseArguments(['test.md', '--browser', 'safari'])).toThrow(
+        'Unsupported browser "safari". Supported browsers: default, chrome, firefox, edge, brave.',
+      )
     })
   })
 

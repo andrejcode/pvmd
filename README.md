@@ -21,7 +21,7 @@
 - Multi-client update delivery over Server-Sent Events
 - GitHub-style Markdown rendering with syntax highlighting, alerts, footnotes, heading anchors, emoji, and KaTeX
 - Copy buttons for fenced code blocks and local static image serving for Markdown content
-- Optional browser auto-open and `--https-only` filtering for remote links and images
+- Optional browser auto-open, browser selection, and `--https-only` filtering for remote links and images
 - Strict file validation, path traversal protection, and user-friendly error handling
 
 ## Installation
@@ -56,6 +56,20 @@ Open the preview automatically in your browser:
 pvmd --open ./docs/guide.md
 ```
 
+When the preview starts, `pvmd` prints a local address such as `Preview ready at http://127.0.0.1:8765/` so you can always open it manually if auto-open is unavailable.
+
+Open the preview in a specific supported browser:
+
+```bash
+pvmd --open --browser chrome ./docs/guide.md
+```
+
+Short flag form:
+
+```bash
+pvmd -o -b firefox ./docs/guide.md
+```
+
 Preview with stricter remote-content handling:
 
 ```bash
@@ -77,16 +91,21 @@ pvmd --no-watch ./docs/guide.md
 --no-watch              Skip file watching
 --https-only            Only allow HTTPS URLs for images and links
 -o, --open              Open in default browser automatically
+-b, --browser <browser> Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: default)
 -h, --help              Show help
 -v, --version           Show version
 ```
+
+Supported browser values: `default`, `chrome`, `firefox`, `edge`, `brave`.
+
+If you choose a named browser such as `brave` or `chrome`, `pvmd` checks that it is available before trying to launch it and falls back to a warning if it is not installed.
 
 ## Architecture
 
 1. `pvmd` resolves and validates the Markdown file path.
 2. The file is rendered with `marked`, the project's Markdown extensions, syntax highlighting, and server-side sanitization.
 3. The result is split into top-level DOM blocks so live updates can patch only the changed sections.
-4. A local server on `127.0.0.1` serves the rendered page, static local assets, and live-update events.
+4. A local server on `127.0.0.1` serves the rendered page, static local assets, and live-update events, then prints the preview address for manual opening or sharing across local browser sessions.
 
 ### Live Update Model
 

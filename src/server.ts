@@ -6,6 +6,7 @@ import {
   type ServerResponse,
 } from 'node:http'
 import { config } from './cli/config'
+import openPreviewInBrowser from './open-browser'
 import { exitWithError } from './utils/fatal-error'
 import { resolveStaticFile } from './utils/static-file'
 
@@ -117,16 +118,6 @@ function getErrorPort(error: NodeJS.ErrnoException): number | null {
   return typeof port === 'number' ? port : null
 }
 
-export async function openServerUrl(url: string): Promise<void> {
-  try {
-    await import('open').then(({ default: open }) => open(url))
-  } catch {
-    console.warn(
-      `Failed to open the browser automatically. Open this URL manually: ${url}`,
-    )
-  }
-}
-
 export function createServer(
   getHTML: () => string,
   handleSSE?: RequestHandler,
@@ -192,10 +183,10 @@ export function startServer(server: Server) {
     }
 
     const url = `http://127.0.0.1:${address.port}/`
-    console.log(`Server running at ${url}`)
+    console.log(`Preview ready at ${url}`)
 
     if (config.open) {
-      void openServerUrl(url)
+      void (openPreviewInBrowser as (url: string) => Promise<void>)(url)
     }
   })
 }

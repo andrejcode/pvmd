@@ -4,9 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## 0.2.3 - Unreleased
 
+### Added
+
+- Added `-b` and `--browser` so users can choose which supported browser `--open` launches: `default`, `chrome`, `firefox`, `edge`, or `brave`.
+- Added browser-specific auto-open handling that resolves platform-specific app names through `open`, checks named browser availability before launch, and warns clearly when a requested browser is not installed.
+
+### Changed
+
+- Updated startup logging to print `Preview ready at ...` as the primary manual-open address.
+
 ### Fixed
 
-- Warned with the local preview URL when browser auto-open fails, so `--open` still gives users a clear manual fallback instead of failing silently.
+- Replaced generic browser auto-open failures with clearer fallback warnings that point users to the printed preview address instead of failing silently.
 - Treated root requests with query strings as the main page request instead of returning a 404, preserving compatibility for future URL-based preview options without breaking page loads.
 
 ## 0.2.2 - 2026-03-30

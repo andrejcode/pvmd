@@ -1,4 +1,9 @@
-import { config } from './config'
+import {
+  config,
+  DEFAULT_CONFIG,
+  SUPPORTED_BROWSERS,
+  type BrowserOption,
+} from './config'
 
 // Browsers intentionally refuse to navigate to certain ports to prevent
 // cross-protocol attacks against well-known services.
@@ -18,10 +23,32 @@ interface Option {
   action: (value?: string) => void
 }
 
+function formatSupportedBrowsers() {
+  return SUPPORTED_BROWSERS.join(', ')
+}
+
+function parseBrowserOption(value: string | undefined): BrowserOption {
+  if (!value) {
+    throw new Error(
+      `Browser option requires a value. Supported browsers: ${formatSupportedBrowsers()}.`,
+    )
+  }
+
+  const normalized = value.trim().toLowerCase()
+
+  if (!SUPPORTED_BROWSERS.includes(normalized as BrowserOption)) {
+    throw new Error(
+      `Unsupported browser "${value}". Supported browsers: ${formatSupportedBrowsers()}.`,
+    )
+  }
+
+  return normalized as BrowserOption
+}
+
 const options: Record<string, Option> = {
   port: {
     alias: 'p',
-    description: `Port number (default: ${config.port}; use 0 for a random available port)`,
+    description: `Port number (default: ${DEFAULT_CONFIG.port}; use 0 for a random available port)`,
     value: '<port>',
     takesValue: true,
     action: (value?: string) => {
@@ -58,7 +85,7 @@ const options: Record<string, Option> = {
     },
   },
   'max-size': {
-    description: `Maximum file size in MB (default: ${config.maxFileSizeMB})`,
+    description: `Maximum file size in MB (default: ${DEFAULT_CONFIG.maxFileSizeMB})`,
     value: '<mb>',
     takesValue: true,
     action: (value?: string) => {
@@ -88,9 +115,18 @@ const options: Record<string, Option> = {
   },
   open: {
     alias: 'o',
-    description: 'Open in default browser automatically',
+    description: 'Open automatically in the selected browser',
     action: () => {
       config.open = true
+    },
+  },
+  browser: {
+    alias: 'b',
+    description: `Browser to open automatically (supported: ${formatSupportedBrowsers()}; default: ${DEFAULT_CONFIG.browser})`,
+    value: '<browser>',
+    takesValue: true,
+    action: (value?: string) => {
+      config.browser = parseBrowserOption(value)
     },
   },
 } as const
