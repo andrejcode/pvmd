@@ -87,6 +87,18 @@ describe('createServer', () => {
     })
   })
 
+  test('GET / with query string returns the main page', async () => {
+    await withTestServer(async (request) => {
+      const res = await request('/?debug=1')
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toBe('text/html')
+
+      const body = await res.text()
+      expect(body).toContain('<main><p>content</p></main>')
+      expect(body).toContain('data-pvmd-app')
+    })
+  })
+
   test('unhandled path returns 404 with JSON body', async () => {
     await withTestServer(async (request) => {
       const res = await request('/some-path')

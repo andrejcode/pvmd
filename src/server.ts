@@ -87,13 +87,17 @@ function respondNotFound(req: IncomingMessage, res: ServerResponse) {
   )
 }
 
+function getRequestPath(url: string | undefined): string {
+  return (url ?? '').split('?')[0] ?? ''
+}
+
 function serveStaticFile(
   req: IncomingMessage,
   res: ServerResponse,
   baseDir: string,
 ): void {
   try {
-    const [pathPart = ''] = (req.url ?? '').split('?')
+    const pathPart = getRequestPath(req.url)
     const decodedPath = decodeURIComponent(pathPart)
     const relativePath = decodedPath.replace(/^\/+/, '')
     const { data, headers } = resolveStaticFile(relativePath, baseDir)
@@ -129,7 +133,9 @@ export function createServer(
   baseDir?: string,
 ): Server {
   return createHttpServer((req: IncomingMessage, res: ServerResponse) => {
-    if (req.method === 'GET' && req.url === '/') {
+    const requestPath = getRequestPath(req.url)
+
+    if (req.method === 'GET' && requestPath === '/') {
       try {
         const html = applyBodyDataAttributes(getHTML())
         const nonce = generateNonce()
@@ -145,9 +151,9 @@ export function createServer(
       } catch (error) {
         exitWithError(error)
       }
-    } else if (req.method === 'GET' && req.url === '/events' && handleSSE) {
+    } else if (req.method === 'GET' && requestPath === '/events' && handleSSE) {
       handleSSE(req, res)
-    } else if (req.method === 'GET' && req.url && baseDir) {
+    } else if (req.method === 'GET' && requestPath && baseDir) {
       serveStaticFile(req, res, baseDir)
     } else {
       respondNotFound(req, res)

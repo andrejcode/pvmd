@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Warned with the local preview URL when browser auto-open fails, so `--open` still gives users a clear manual fallback instead of failing silently.
+- Treated root requests with query strings as the main page request instead of returning a 404, preserving compatibility for future URL-based preview options without breaking page loads.
 
 ## 0.2.2 - 2026-03-30
 
