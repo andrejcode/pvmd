@@ -25,6 +25,44 @@ const markedEmojiOptions = {
 
 const starryNight = await createStarryNight(common)
 
+const HIGHLIGHT_CACHE_MAX_SIZE = 256
+const BLOCK_HTML_CACHE_MAX_SIZE = 512
+
+class LruCache<K, V> {
+  private readonly map = new Map<K, V>()
+
+  constructor(private readonly maxSize: number) {}
+
+  get(key: K): V | undefined {
+    const value = this.map.get(key)
+    if (value === undefined) return undefined
+    this.map.delete(key)
+    this.map.set(key, value)
+    return value
+  }
+
+  set(key: K, value: V): void {
+    if (this.map.has(key)) {
+      this.map.delete(key)
+    } else if (this.map.size >= this.maxSize) {
+      this.map.delete(this.map.keys().next().value as K)
+    }
+    this.map.set(key, value)
+  }
+
+  clear(): void {
+    this.map.clear()
+  }
+}
+
+const highlightCache = new LruCache<string, string>(HIGHLIGHT_CACHE_MAX_SIZE)
+const blockHtmlCache = new LruCache<string, string>(BLOCK_HTML_CACHE_MAX_SIZE)
+
+export function clearRenderCaches(): void {
+  highlightCache.clear()
+  blockHtmlCache.clear()
+}
+
 marked.use(
   {
     async: false,
@@ -122,12 +160,22 @@ function walkMarkdownTokens(tokens: MarkdownToken[]): MarkdownToken[] {
 }
 
 function renderTokenHtml(token: MarkdownToken): string {
-  return sanitizeHTML(marked.parser([structuredClone(token)]))
+  const key = JSON.stringify(token)
+  const cached = blockHtmlCache.get(key)
+  if (cached !== undefined) return cached
+  const result = sanitizeHTML(marked.parser([structuredClone(token)]))
+  blockHtmlCache.set(key, result)
+  return result
 }
 
 function highlightCode(code: string, lang: string): string {
+  const key = `${lang}\x00${code}`
+  const cached = highlightCache.get(key)
+  if (cached !== undefined) return cached
   const scope = starryNight.flagToScope(lang)
-  return scope ? toHtml(starryNight.highlight(code, scope)) : code
+  const result = scope ? toHtml(starryNight.highlight(code, scope)) : code
+  highlightCache.set(key, result)
+  return result
 }
 
 function getBlockKey(token: MarkdownToken, html: string): string {

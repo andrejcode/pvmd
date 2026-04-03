@@ -8,7 +8,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { readMarkdownFile, renderMarkdownDocument } from '../index'
+import { clearRenderCaches, readMarkdownFile, renderMarkdownDocument } from '../index'
 
 function renderMarkdown(markdown: string): string {
   return renderMarkdownDocument(markdown)
@@ -447,6 +447,64 @@ const example = 'code block';
       const result = renderMarkdown('- [x] done\n- [ ] todo')
       expect(result).toContain('type="checkbox"')
       expect(result).toContain('disabled')
+    })
+  })
+
+  describe('render caching', () => {
+    beforeEach(() => {
+      clearRenderCaches()
+    })
+
+    test('should produce identical heading ids from cached and uncached renders', () => {
+      const markdown = '# Heading\n\n## Subheading\n\n### Heading'
+      const first = renderMarkdownDocument(markdown)
+      clearRenderCaches()
+      const second = renderMarkdownDocument(markdown)
+
+      expect(first.html).toBe(second.html)
+      expect(first.blocks.map((b) => b.id)).toEqual(second.blocks.map((b) => b.id))
+    })
+
+    test('should produce identical heading ids on repeated render without cache clear', () => {
+      const markdown = '# Title\n\nSome text.\n\n# Title'
+      const first = renderMarkdownDocument(markdown)
+      const second = renderMarkdownDocument(markdown)
+
+      expect(first.html).toBe(second.html)
+      expect(first.blocks.map((b) => b.html)).toEqual(
+        second.blocks.map((b) => b.html),
+      )
+    })
+
+    test('should produce identical footnote output from cached and uncached renders', () => {
+      const markdown = 'Text with note[^1].\n\n[^1]: Footnote text'
+      const first = renderMarkdownDocument(markdown)
+      clearRenderCaches()
+      const second = renderMarkdownDocument(markdown)
+
+      expect(first.html).toBe(second.html)
+      expect(first.html).toContain('href="#footnote-1"')
+      expect(first.html).toContain('id="footnote-1"')
+    })
+
+    test('should produce identical syntax-highlighted code block output from cached and uncached renders', () => {
+      const markdown = '```javascript\nconst x = 1;\n```'
+      const first = renderMarkdownDocument(markdown)
+      clearRenderCaches()
+      const second = renderMarkdownDocument(markdown)
+
+      expect(first.html).toBe(second.html)
+      expect(first.blocks[0]?.html).toContain(
+        '<pre><code class="language-javascript"><span class="pl-k">const</span>',
+      )
+    })
+
+    test('should return different blocks for different code content after cache clear', () => {
+      const first = renderMarkdownDocument('```javascript\nconst x = 1;\n```')
+      clearRenderCaches()
+      const second = renderMarkdownDocument('```javascript\nconst y = 2;\n```')
+
+      expect(first.blocks[0]?.html).not.toBe(second.blocks[0]?.html)
     })
   })
 })
