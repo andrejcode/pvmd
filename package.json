@@ -32,7 +32,7 @@
     "url": "https://github.com/andrejcode/pvmd/issues"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.0"
   },
   "publishConfig": {
     "access": "public"
@@ -64,7 +64,7 @@
     "gemoji": "^8.1.0",
     "github-markdown-css": "^5.9.0",
     "hast-util-to-html": "^9.0.5",
-    "marked": "^17.0.3",
+    "marked": "^17.0.5",
     "marked-alert": "^2.1.2",
     "marked-emoji": "^2.0.2",
     "marked-footnote": "^1.4.0",
@@ -75,19 +75,19 @@
     "parse5": "^8.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.35.0",
-    "@types/node": "^25.3.0",
-    "esbuild": "^0.27.3",
-    "eslint": "^9.35.0",
+    "@eslint/js": "^9.39.4",
+    "@types/node": "^25.5.2",
+    "esbuild": "^0.28.0",
+    "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
-    "globals": "^17.3.0",
-    "jsdom": "^28.1.0",
+    "globals": "^17.4.0",
+    "jsdom": "^29.0.1",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.0",
-    "vitest": "^4.0.18"
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^4.1.2"
   }
 }
