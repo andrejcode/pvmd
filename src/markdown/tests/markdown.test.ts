@@ -8,7 +8,11 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { clearRenderCaches, readMarkdownFile, renderMarkdownDocument } from '../index'
+import {
+  clearRenderCaches,
+  readMarkdownFile,
+  renderMarkdownDocument,
+} from '../index'
 
 function renderMarkdown(markdown: string): string {
   return renderMarkdownDocument(markdown)
@@ -462,7 +466,9 @@ const example = 'code block';
       const second = renderMarkdownDocument(markdown)
 
       expect(first.html).toBe(second.html)
-      expect(first.blocks.map((b) => b.id)).toEqual(second.blocks.map((b) => b.id))
+      expect(first.blocks.map((b) => b.id)).toEqual(
+        second.blocks.map((b) => b.id),
+      )
     })
 
     test('should produce identical heading ids on repeated render without cache clear', () => {
