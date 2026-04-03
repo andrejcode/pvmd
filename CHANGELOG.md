@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - Added `--theme` so previews can opt into a specific `github-markdown-css` theme: `default`, `light`, `dark`, `dark-dimmed`, `dark-high-contrast`, `dark-colorblind`, or `light-colorblind`.
 - Added `-t` as the short alias for `--theme`.
+- Added support for a global `~/.pvmd/config.json` file that overrides built-in defaults and is itself overridden by explicit CLI flags.
 
 ### Changed
 

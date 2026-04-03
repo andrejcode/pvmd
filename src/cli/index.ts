@@ -1,3 +1,4 @@
+import { loadLocalConfig } from './local-config'
 import { resolveOption, showHelp } from './options'
 
 function handleHelp(args: string[]) {
@@ -22,6 +23,7 @@ function handleVersion(args: string[]) {
 export function parseArguments(args: string[]) {
   handleHelp(args)
   handleVersion(args)
+  loadLocalConfig()
 
   let userPath: string | null = null
 

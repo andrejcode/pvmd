@@ -1,6 +1,7 @@
 import { type MockInstance } from 'vitest'
 import { config, DEFAULT_CONFIG } from '../config'
 import { parseArguments } from '../index'
+import { fileSystem, osPaths } from '../local-config'
 
 describe('parseArguments', () => {
   let consoleLogSpy: MockInstance
@@ -71,6 +72,41 @@ describe('parseArguments', () => {
 
   test('should return the correct arguments', () => {
     expect(parseArguments(['test.md'])).toBe('test.md')
+  })
+
+  test('should load local config before applying CLI flags', () => {
+    const originalExistsSync = fileSystem.existsSync
+    const originalReadFileSync = fileSystem.readFileSync
+    const originalHomedir = osPaths.homedir
+    osPaths.homedir = vi.fn(() => '/Users/tester')
+    fileSystem.existsSync = vi.fn(
+      (path) => String(path) === '/Users/tester/.pvmd/config.json',
+    )
+    fileSystem.readFileSync = vi.fn(() => {
+      return JSON.stringify({
+        port: 8123,
+        open: true,
+        browser: 'firefox',
+        theme: 'dark',
+      })
+    })
+    const userPath = parseArguments([
+      'test.md',
+      '--port',
+      '9000',
+      '--theme',
+      'light',
+    ])
+
+    expect(userPath).toBe('test.md')
+    expect(config.port).toBe(9000)
+    expect(config.open).toBe(true)
+    expect(config.browser).toBe('firefox')
+    expect(config.theme).toBe('light')
+
+    fileSystem.existsSync = originalExistsSync
+    fileSystem.readFileSync = originalReadFileSync
+    osPaths.homedir = originalHomedir
   })
 
   describe('port option', () => {
@@ -193,6 +229,25 @@ describe('parseArguments', () => {
         'Unsupported theme "sepia". Supported themes: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind.',
       )
     })
+  })
+
+  test('should throw when local config is invalid', () => {
+    const originalExistsSync = fileSystem.existsSync
+    const originalReadFileSync = fileSystem.readFileSync
+    const originalHomedir = osPaths.homedir
+    osPaths.homedir = vi.fn(() => '/Users/tester')
+    fileSystem.existsSync = vi.fn(
+      (path) => String(path) === '/Users/tester/.pvmd/config.json',
+    )
+    fileSystem.readFileSync = vi.fn(() => '{invalid json')
+
+    expect(() => parseArguments(['test.md'])).toThrow(
+      '.pvmd/config.json must be valid JSON.',
+    )
+
+    fileSystem.existsSync = originalExistsSync
+    fileSystem.readFileSync = originalReadFileSync
+    osPaths.homedir = originalHomedir
   })
 
   describe('size options', () => {

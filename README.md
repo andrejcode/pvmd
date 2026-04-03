@@ -8,6 +8,7 @@
 - [Installation](#installation)
 - [Usage](#usage)
 - [CLI Options](#cli-options)
+- [Local Config](#local-config)
 - [Architecture](#architecture)
 - [Security](#security)
 - [Development](#development)
@@ -94,6 +95,17 @@ Disable file watching:
 pvmd --no-watch ./docs/guide.md
 ```
 
+Use a local config file for project defaults:
+
+```json
+{
+  "open": true,
+  "browser": "firefox",
+  "theme": "dark-dimmed",
+  "port": 9000
+}
+```
+
 ## CLI Options
 
 ```text
@@ -116,6 +128,34 @@ Supported theme values: `default`, `light`, `dark`, `dark-dimmed`, `dark-high-co
 If you omit `--theme`, `pvmd` uses the package default stylesheet, which switches automatically between GitHub's light and dark variants based on the system `prefers-color-scheme` setting.
 
 If you choose a named browser such as `brave` or `chrome`, `pvmd` checks that it is available before trying to launch it and falls back to a warning if it is not installed.
+
+## Local Config
+
+`pvmd` supports a global `.pvmd/config.json` file in your home directory so you do not need to repeat common flags.
+
+The CLI looks for `.pvmd/config.json` in your OS user home directory
+
+- Linux and macOS: `~/.pvmd/config.json`
+- Windows: `%USERPROFILE%\.pvmd\config.json`
+
+There is only one shared config location for the current user. Those config values override the built-in defaults, and explicit CLI flags override the config.
+
+Supported config keys are: `port`, `skipSizeCheck`, `maxFileSizeMB`, `watch`, `httpsOnly`, `open`, `browser`, and `theme`.
+
+Example:
+
+```json
+{
+  "open": true,
+  "browser": "chrome",
+  "theme": "dark",
+  "port": 9000,
+  "watch": true,
+  "httpsOnly": false
+}
+```
+
+Save that as `~/.pvmd/config.json`. Running `pvmd README.md` then uses those values automatically, while a command such as `pvmd README.md --port 8765 --theme light` still overrides the configured defaults.
 
 ## Architecture
 
