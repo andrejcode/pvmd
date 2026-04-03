@@ -3,6 +3,8 @@ import {
   DEFAULT_CONFIG,
   SUPPORTED_BROWSERS,
   type BrowserOption,
+  SUPPORTED_THEMES,
+  type ThemeOption,
 } from './config'
 
 // Browsers intentionally refuse to navigate to certain ports to prevent
@@ -27,6 +29,10 @@ function formatSupportedBrowsers() {
   return SUPPORTED_BROWSERS.join(', ')
 }
 
+function formatSupportedThemes() {
+  return SUPPORTED_THEMES.join(', ')
+}
+
 function parseBrowserOption(value: string | undefined): BrowserOption {
   if (!value) {
     throw new Error(
@@ -43,6 +49,24 @@ function parseBrowserOption(value: string | undefined): BrowserOption {
   }
 
   return normalized as BrowserOption
+}
+
+function parseThemeOption(value: string | undefined): ThemeOption {
+  if (!value) {
+    throw new Error(
+      `Theme option requires a value. Supported themes: ${formatSupportedThemes()}.`,
+    )
+  }
+
+  const normalized = value.trim().toLowerCase()
+
+  if (!SUPPORTED_THEMES.includes(normalized as ThemeOption)) {
+    throw new Error(
+      `Unsupported theme "${value}". Supported themes: ${formatSupportedThemes()}.`,
+    )
+  }
+
+  return normalized as ThemeOption
 }
 
 const options: Record<string, Option> = {
@@ -127,6 +151,15 @@ const options: Record<string, Option> = {
     takesValue: true,
     action: (value?: string) => {
       config.browser = parseBrowserOption(value)
+    },
+  },
+  theme: {
+    alias: 't',
+    description: `GitHub Markdown theme to use (supported: ${formatSupportedThemes()}; default: ${DEFAULT_CONFIG.theme})`,
+    value: '<theme>',
+    takesValue: true,
+    action: (value?: string) => {
+      config.theme = parseThemeOption(value)
     },
   },
 } as const

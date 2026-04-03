@@ -1,4 +1,3 @@
-import 'github-markdown-css/github-markdown.css'
 import 'katex/dist/katex.min.css'
 import './styles.css'
 import {

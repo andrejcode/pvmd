@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+
+- Added `--theme` so previews can opt into a specific `github-markdown-css` theme: `default`, `light`, `dark`, `dark-dimmed`, `dark-high-contrast`, `dark-colorblind`, or `light-colorblind`.
+- Added `-t` as the short alias for `--theme`.
+
+### Changed
+
+- Switched markdown theme styling to server-side theme injection so each preview includes only the selected `github-markdown-css` stylesheet, while the default still follows the system color-scheme preference.
+
 ## 0.2.3 - 2026-04-02
 
 ### Added

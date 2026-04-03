@@ -8,6 +8,18 @@ export const SUPPORTED_BROWSERS = [
 
 export type BrowserOption = (typeof SUPPORTED_BROWSERS)[number]
 
+export const SUPPORTED_THEMES = [
+  'default',
+  'light',
+  'dark',
+  'dark-dimmed',
+  'dark-high-contrast',
+  'dark-colorblind',
+  'light-colorblind',
+] as const
+
+export type ThemeOption = (typeof SUPPORTED_THEMES)[number]
+
 interface Config {
   port: number
   skipSizeCheck: boolean
@@ -16,6 +28,7 @@ interface Config {
   httpsOnly: boolean
   open: boolean
   browser: BrowserOption
+  theme: ThemeOption
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -26,6 +39,7 @@ export const DEFAULT_CONFIG: Config = {
   httpsOnly: false,
   open: false,
   browser: 'default',
+  theme: 'default',
 }
 
 export const config: Config = {

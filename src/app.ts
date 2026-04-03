@@ -36,7 +36,7 @@ export function run(userPath: string) {
   const getHTML = () => {
     const markdownContent = readMarkdownFile(fullPath)
     const renderedMarkdown = renderMarkdownDocument(markdownContent)
-    return prepareHTML(fullPath, renderedMarkdown.html)
+    return prepareHTML(fullPath, renderedMarkdown.html, config.theme)
   }
 
   const server = createServer(getHTML, watcher?.handleSSE, dirname(fullPath))

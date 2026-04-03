@@ -76,6 +76,18 @@ Preview with stricter remote-content handling:
 pvmd --open --https-only ./docs/guide.md
 ```
 
+Preview with a specific GitHub Markdown theme:
+
+```bash
+pvmd --theme dark-dimmed ./docs/guide.md
+```
+
+Short flag form:
+
+```bash
+pvmd -t light-colorblind ./docs/guide.md
+```
+
 Disable file watching:
 
 ```bash
@@ -92,11 +104,16 @@ pvmd --no-watch ./docs/guide.md
 --https-only            Only allow HTTPS URLs for images and links
 -o, --open              Open in default browser automatically
 -b, --browser <browser> Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: default)
+-t, --theme <theme>     GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: default)
 -h, --help              Show help
 -v, --version           Show version
 ```
 
 Supported browser values: `default`, `chrome`, `firefox`, `edge`, `brave`.
+
+Supported theme values: `default`, `light`, `dark`, `dark-dimmed`, `dark-high-contrast`, `dark-colorblind`, `light-colorblind`.
+
+If you omit `--theme`, `pvmd` uses the package default stylesheet, which switches automatically between GitHub's light and dark variants based on the system `prefers-color-scheme` setting.
 
 If you choose a named browser such as `brave` or `chrome`, `pvmd` checks that it is available before trying to launch it and falls back to a warning if it is not installed.
 

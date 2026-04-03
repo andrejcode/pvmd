@@ -1,6 +1,12 @@
 import { run } from '../app'
-import { validateMarkdownPath } from '../markdown'
+import { config, DEFAULT_CONFIG } from '../cli/config'
+import {
+  readMarkdownFile,
+  renderMarkdownDocument,
+  validateMarkdownPath,
+} from '../markdown'
 import { createServer, startServer } from '../server'
+import { prepareHTML } from '../template'
 import { resolvePath } from '../utils/path-validation'
 import createWatcher from '../watcher'
 
@@ -30,6 +36,7 @@ vi.mock('../watcher', () => ({
 describe('run', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    Object.assign(config, DEFAULT_CONFIG)
     vi.mocked(resolvePath).mockReturnValue('/tmp/readme.md')
   })
 
@@ -45,5 +52,32 @@ describe('run', () => {
     expect(createWatcher).not.toHaveBeenCalled()
     expect(createServer).not.toHaveBeenCalled()
     expect(startServer).not.toHaveBeenCalled()
+  })
+
+  test('passes the configured theme to prepareHTML', () => {
+    config.theme = 'dark-colorblind'
+
+    vi.mocked(validateMarkdownPath).mockReturnValue(undefined)
+    vi.mocked(createWatcher).mockReturnValue({
+      cleanup: vi.fn(),
+      handleSSE: vi.fn(),
+    })
+    vi.mocked(readMarkdownFile).mockReturnValue('# Hello')
+    vi.mocked(renderMarkdownDocument).mockReturnValue({
+      html: '<h1>Hello</h1>',
+      blocks: [],
+    })
+    vi.mocked(createServer).mockImplementation((getHTML) => {
+      getHTML()
+      return {} as never
+    })
+
+    run('README.md')
+
+    expect(prepareHTML).toHaveBeenCalledWith(
+      '/tmp/readme.md',
+      '<h1>Hello</h1>',
+      'dark-colorblind',
+    )
   })
 })

@@ -166,6 +166,35 @@ describe('parseArguments', () => {
     })
   })
 
+  describe('theme option', () => {
+    test('should set config.theme when --theme is provided', () => {
+      parseArguments(['test.md', '--theme', 'dark'])
+      expect(config.theme).toBe('dark')
+    })
+
+    test('should set config.theme when -t is provided', () => {
+      parseArguments(['test.md', '-t', 'light-colorblind'])
+      expect(config.theme).toBe('light-colorblind')
+    })
+
+    test('should normalize theme values to lowercase', () => {
+      parseArguments(['test.md', '--theme', 'Dark-Dimmed'])
+      expect(config.theme).toBe('dark-dimmed')
+    })
+
+    test('should throw an error if theme value is not provided', () => {
+      expect(() => parseArguments(['test.md', '--theme'])).toThrow(
+        'Theme option requires a value. Supported themes: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind.',
+      )
+    })
+
+    test('should throw an error if theme is unsupported', () => {
+      expect(() => parseArguments(['test.md', '--theme', 'sepia'])).toThrow(
+        'Unsupported theme "sepia". Supported themes: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind.',
+      )
+    })
+  })
+
   describe('size options', () => {
     test('should update the config if an option is provided', () => {
       parseArguments(['test.md', '--no-size-check'])
