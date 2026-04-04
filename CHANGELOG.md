@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Switched markdown theme styling to server-side theme injection so each preview includes only the selected `github-markdown-css` stylesheet, while the default still follows the system color-scheme preference.
+- Added bounded LRU render caches for syntax highlighting and per-block HTML generation so repeated renders of large markdown documents reuse existing work without changing heading IDs, footnotes, or highlighted output.
 
 ## 0.2.3 - 2026-04-02
 
