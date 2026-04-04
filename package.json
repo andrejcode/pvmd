@@ -53,11 +53,18 @@
     "test:watch": "vitest",
     "test:app": "vitest run --project app",
     "test:client": "vitest run --project client",
+    "hooks:install": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "prepack": "npm run clean && npm run build"
+  },
+  "lint-staged": {
+    "*": [
+      "npm run format",
+      "npm run lint:fix"
+    ]
   },
   "dependencies": {
     "@wooorm/starry-night": "^3.9.0",
@@ -83,7 +90,9 @@
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
     "globals": "^17.4.0",
+    "husky": "^9.1.7",
     "jsdom": "^29.0.1",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
