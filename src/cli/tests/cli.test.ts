@@ -39,6 +39,57 @@ describe('parseArguments', () => {
     expect(processExitSpy).toHaveBeenCalledWith(0)
   })
 
+  test('should print help with effective defaults from local config', () => {
+    const originalExistsSync = fileSystem.existsSync
+    const originalReadFileSync = fileSystem.readFileSync
+    const originalHomedir = osPaths.homedir
+    osPaths.homedir = vi.fn(() => '/Users/tester')
+    fileSystem.existsSync = vi.fn(
+      (path) => String(path) === '/Users/tester/.pvmd/config.json',
+    )
+    fileSystem.readFileSync = vi.fn(() => {
+      return JSON.stringify({
+        port: 8123,
+        skipSizeCheck: true,
+        maxFileSizeMB: 5,
+        watch: false,
+        httpsOnly: true,
+        open: true,
+        browser: 'firefox',
+        theme: 'dark',
+      })
+    })
+
+    expect(() => parseArguments(['--help'])).toThrow(
+      'Process exited with code 0',
+    )
+
+    const output = consoleLogSpy.mock.calls.flat().join('\n')
+
+    expect(output).toContain(
+      'Port number (default: 8123; use 0 for a random available port)',
+    )
+    expect(output).toContain('Skip file size validation (default: true)')
+    expect(output).toContain('Maximum file size in MB (default: 5)')
+    expect(output).toContain('Skip file watching (default: true)')
+    expect(output).toContain(
+      'Only allow HTTPS URLs for images and links (default: true)',
+    )
+    expect(output).toContain(
+      'Open automatically in the selected browser (default: true)',
+    )
+    expect(output).toContain(
+      'Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: firefox)',
+    )
+    expect(output).toContain(
+      'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: dark)',
+    )
+
+    fileSystem.existsSync = originalExistsSync
+    fileSystem.readFileSync = originalReadFileSync
+    osPaths.homedir = originalHomedir
+  })
+
   test('should print version if --version or -v is provided', () => {
     const version = '0.0.0'
     vi.stubEnv('PVMD_VERSION', version)

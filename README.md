@@ -110,6 +110,8 @@ For very large Markdown files with many lines, the first preview load can take l
 
 ## CLI Options
 
+The built-in defaults below are the fallback values when no local config is present. `pvmd --help` shows the effective defaults after applying `~/.pvmd/config.json`, and explicit CLI flags still take precedence.
+
 ```text
 -p, --port <port>       Port number (default: 8765; use 0 for a random port)
 --no-size-check         Skip file size validation

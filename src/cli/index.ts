@@ -3,6 +3,7 @@ import { resolveOption, showHelp } from './options'
 
 function handleHelp(args: string[]) {
   if (args.includes('--help') || args.includes('-h')) {
+    loadLocalConfig()
     showHelp()
     process.exit(0)
   }

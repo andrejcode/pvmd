@@ -1,6 +1,5 @@
 import {
   config,
-  DEFAULT_CONFIG,
   formatSupportedBrowsers,
   formatSupportedThemes,
   parseBrowserValue,
@@ -11,7 +10,6 @@ import {
 
 export interface Option {
   alias?: string
-  description: string
   value?: string
   takesValue?: boolean
   action: (value?: string) => void
@@ -20,7 +18,6 @@ export interface Option {
 export const options: Record<string, Option> = {
   port: {
     alias: 'p',
-    description: `Port number (default: ${DEFAULT_CONFIG.port}; use 0 for a random available port)`,
     value: '<port>',
     takesValue: true,
     action: (value?: string) => {
@@ -28,13 +25,11 @@ export const options: Record<string, Option> = {
     },
   },
   'no-size-check': {
-    description: 'Skip file size validation',
     action: () => {
       config.skipSizeCheck = true
     },
   },
   'max-size': {
-    description: `Maximum file size in MB (default: ${DEFAULT_CONFIG.maxFileSizeMB})`,
     value: '<mb>',
     takesValue: true,
     action: (value?: string) => {
@@ -42,27 +37,23 @@ export const options: Record<string, Option> = {
     },
   },
   'no-watch': {
-    description: 'Skip file watching',
     action: () => {
       config.watch = false
     },
   },
   'https-only': {
-    description: 'Only allow HTTPS URLs for images and links',
     action: () => {
       config.httpsOnly = true
     },
   },
   open: {
     alias: 'o',
-    description: 'Open automatically in the selected browser',
     action: () => {
       config.open = true
     },
   },
   browser: {
     alias: 'b',
-    description: `Browser to open automatically (supported: ${formatSupportedBrowsers()}; default: ${DEFAULT_CONFIG.browser})`,
     value: '<browser>',
     takesValue: true,
     action: (value?: string) => {
@@ -71,7 +62,6 @@ export const options: Record<string, Option> = {
   },
   theme: {
     alias: 't',
-    description: `GitHub Markdown theme to use (supported: ${formatSupportedThemes()}; default: ${DEFAULT_CONFIG.theme})`,
     value: '<theme>',
     takesValue: true,
     action: (value?: string) => {
@@ -79,6 +69,33 @@ export const options: Record<string, Option> = {
     },
   },
 } as const
+
+function formatEnabledDefault(enabled: boolean) {
+  return enabled ? 'true' : 'false'
+}
+
+function getOptionDescription(key: string) {
+  switch (key) {
+    case 'port':
+      return `Port number (default: ${config.port}; use 0 for a random available port)`
+    case 'no-size-check':
+      return `Skip file size validation (default: ${formatEnabledDefault(config.skipSizeCheck)})`
+    case 'max-size':
+      return `Maximum file size in MB (default: ${config.maxFileSizeMB})`
+    case 'no-watch':
+      return `Skip file watching (default: ${formatEnabledDefault(!config.watch)})`
+    case 'https-only':
+      return `Only allow HTTPS URLs for images and links (default: ${formatEnabledDefault(config.httpsOnly)})`
+    case 'open':
+      return `Open automatically in the selected browser (default: ${formatEnabledDefault(config.open)})`
+    case 'browser':
+      return `Browser to open automatically (supported: ${formatSupportedBrowsers()}; default: ${config.browser})`
+    case 'theme':
+      return `GitHub Markdown theme to use (supported: ${formatSupportedThemes()}; default: ${config.theme})`
+    default:
+      return ''
+  }
+}
 
 function createOptionMaps() {
   const longToOption = new Map<string, Option>()
@@ -126,7 +143,7 @@ export function showHelp() {
     const flagString = value.alias ? `-${value.alias}, ${longFlag}` : longFlag
     flagsToShow[key] = {
       flagString,
-      description: value.description,
+      description: getOptionDescription(key),
     }
   }
 
