@@ -123,7 +123,7 @@ describe('parseArguments', () => {
       'Port number (default: 8765; use 0 for a random available port)',
     )
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Warning: Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
+      'Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
     )
   })
 
@@ -333,7 +333,7 @@ describe('parseArguments', () => {
 
     expect(parseArguments(['test.md'])).toBe('test.md')
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Warning: .pvmd/config.json must be valid JSON. Ignoring local config.',
+      '.pvmd/config.json must be valid JSON. Ignoring local config.',
     )
   })
 

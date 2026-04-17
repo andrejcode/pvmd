@@ -33,10 +33,6 @@ export const osPaths = {
   homedir: () => homedir(),
 }
 
-function warnLocalConfig(message: string) {
-  console.warn(`Warning: ${message}`)
-}
-
 export function findLocalConfigPath(homeDirectory = osPaths.homedir()) {
   const candidatePath = resolve(
     homeDirectory,
@@ -61,7 +57,7 @@ export function loadLocalConfig(homeDirectory = osPaths.homedir()) {
   try {
     parsedConfig = JSON.parse(fileSystem.readFileSync(configPath))
   } catch {
-    warnLocalConfig(
+    console.warn(
       `${LOCAL_CONFIG_RELATIVE_PATH} must be valid JSON. Ignoring local config.`,
     )
     return null
@@ -73,7 +69,7 @@ export function loadLocalConfig(homeDirectory = osPaths.homedir()) {
 
 export function applyLocalConfig(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    warnLocalConfig(
+    console.warn(
       `${LOCAL_CONFIG_RELATIVE_PATH} must contain a JSON object. Ignoring local config.`,
     )
     return
@@ -113,12 +109,12 @@ export function applyLocalConfig(value: unknown) {
           config.theme = parseConfigString(key, rawValue, parseThemeValue)
           break
         default:
-          warnLocalConfig(
+          console.warn(
             `Unsupported setting "${key}" in ${LOCAL_CONFIG_RELATIVE_PATH}. Supported settings: ${CONFIG_KEYS.join(', ')}. Ignoring setting.`,
           )
       }
     } catch (error) {
-      warnLocalConfig((error as Error).message + ' Ignoring setting.')
+      console.warn((error as Error).message + ' Ignoring setting.')
     }
   }
 }

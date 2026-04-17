@@ -76,7 +76,7 @@ describe('local config', () => {
     applyLocalConfig({ nope: true })
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Warning: Unsupported setting "nope" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSizeMB, watch, httpsOnly, open, browser, theme. Ignoring setting.',
+      'Unsupported setting "nope" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSizeMB, watch, httpsOnly, open, browser, theme. Ignoring setting.',
     )
     expect(config).toMatchObject(DEFAULT_CONFIG)
   })
@@ -85,7 +85,7 @@ describe('local config', () => {
     applyLocalConfig({ open: 'yes' })
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Warning: Invalid setting "open" in .pvmd/config.json. Expected a boolean. Ignoring setting.',
+      'Invalid setting "open" in .pvmd/config.json. Expected a boolean. Ignoring setting.',
     )
     expect(config.open).toBe(DEFAULT_CONFIG.open)
   })
@@ -99,10 +99,10 @@ describe('local config', () => {
     })
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Warning: Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
+      'Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
     )
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Warning: Unsupported setting "unknownConfig" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSizeMB, watch, httpsOnly, open, browser, theme. Ignoring setting.',
+      'Unsupported setting "unknownConfig" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSizeMB, watch, httpsOnly, open, browser, theme. Ignoring setting.',
     )
     expect(config.port).toBe(DEFAULT_CONFIG.port)
     expect(config.theme).toBe('dark')
@@ -122,7 +122,7 @@ describe('local config', () => {
     loadLocalConfig()
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Warning: .pvmd/config.json must be valid JSON. Ignoring local config.',
+      '.pvmd/config.json must be valid JSON. Ignoring local config.',
     )
     expect(config).toMatchObject(DEFAULT_CONFIG)
 
