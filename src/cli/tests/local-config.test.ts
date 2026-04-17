@@ -99,7 +99,7 @@ describe('local config', () => {
     })
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Warning: Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Please choose a different port. Ignoring setting.',
+      'Warning: Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
     )
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       'Warning: Unsupported setting "unknownConfig" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSizeMB, watch, httpsOnly, open, browser, theme. Ignoring setting.',

@@ -123,7 +123,7 @@ describe('parseArguments', () => {
       'Port number (default: 8765; use 0 for a random available port)',
     )
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Warning: Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Please choose a different port. Ignoring setting.',
+      'Warning: Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
     )
   })
 
@@ -218,6 +218,12 @@ describe('parseArguments', () => {
       )
     })
 
+    test('should throw an error if port number is not numeric', () => {
+      expect(() => parseArguments(['test.md', '--port', 'abc'])).toThrow(
+        'Port must be a number',
+      )
+    })
+
     test('should throw an error if port number is not an integer', () => {
       expect(() => parseArguments(['test.md', '--port', '1234.5'])).toThrow(
         'Port must be an integer',
@@ -226,7 +232,7 @@ describe('parseArguments', () => {
 
     test('should throw an error if port is blocked by browsers', () => {
       expect(() => parseArguments(['test.md', '--port', '6000'])).toThrow(
-        'Port 6000 is blocked by browsers for security reasons. Please choose a different port.',
+        'Port 6000 is blocked by browsers for security reasons.',
       )
     })
 

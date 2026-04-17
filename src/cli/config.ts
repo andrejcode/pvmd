@@ -70,25 +70,25 @@ export function formatSupportedThemes() {
 
 export function parsePortValue(value: unknown): number {
   if (value === undefined || value === null || value === '') {
-    throw new Error('Port option requires a value')
+    throw new Error('Port option requires a value.')
   }
 
   const parsed = Number(value)
   if (isNaN(parsed)) {
-    throw new Error('Port must be a number')
+    throw new Error('Port must be a number.')
   }
 
   if (!Number.isInteger(parsed)) {
-    throw new Error('Port must be an integer')
+    throw new Error('Port must be an integer.')
   }
 
   if (parsed < 0 || parsed > 65535) {
-    throw new Error('Port must be between 0 and 65535')
+    throw new Error('Port must be between 0 and 65535.')
   }
 
   if (parsed !== 0 && BROWSER_UNSAFE_PORTS.has(parsed)) {
     throw new Error(
-      `Port ${parsed} is blocked by browsers for security reasons. Please choose a different port.`,
+      `Port ${parsed} is blocked by browsers for security reasons.`,
     )
   }
 
@@ -97,12 +97,12 @@ export function parsePortValue(value: unknown): number {
 
 export function parseMaxFileSizeValue(value: unknown): number {
   if (value === undefined || value === null || value === '') {
-    throw new Error('Max size option requires a value')
+    throw new Error('Max size option requires a value.')
   }
 
   const parsed = Number(value)
   if (isNaN(parsed) || parsed <= 0) {
-    throw new Error('Max size must be a positive number')
+    throw new Error('Max size must be a positive number.')
   }
 
   return parsed
