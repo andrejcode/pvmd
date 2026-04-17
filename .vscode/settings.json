@@ -6,10 +6,5 @@
     "source.fixAll.eslint": "explicit"
   },
   "editor.linkedEditing": true,
-  "prettier.requireConfig": true,
-  "github.copilot.chat.commitMessageGeneration.instructions": [
-    {
-      "text": "Write commit messages in Conventional Commits format. Use a concise imperative subject line in the form type(scope): summary when a scope is useful, otherwise type: summary. Always include a descriptive body after a blank line. The body should explain the main behavior changes, important implementation details, and notable test or documentation updates in clear prose or short dash bullets. Keep the subject specific and avoid vague summaries like update or fix stuff."
-    }
-  ]
+  "prettier.requireConfig": true
 }
