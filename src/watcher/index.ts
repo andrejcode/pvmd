@@ -2,10 +2,10 @@ import { watch, type FSWatcher } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import {
   readMarkdownFile,
-  renderMarkdownDocument,
+  renderMarkdownBlocks,
   validateMarkdownPath,
 } from '@/markdown'
-import type { LiveUpdateDocument } from '@/shared/live-update'
+import type { LiveUpdateBlock } from '@/shared/live-update'
 import { exitWithError } from '@/utils/fatal-error'
 import { createLiveUpdateMessage } from './patch-diff'
 
@@ -16,7 +16,7 @@ export default function createWatcher(path: string) {
   const clients = new Set<ServerResponse>()
   let reloadTimer: ReturnType<typeof setTimeout> | null = null
   let renameRetryTimer: ReturnType<typeof setTimeout> | null = null
-  let previousDocument: LiveUpdateDocument | null = null
+  let previousBlocks: LiveUpdateBlock[] | null = null
   let watcher: FSWatcher | null = null
   let isClosed = false
 
@@ -68,10 +68,10 @@ export default function createWatcher(path: string) {
 
     try {
       const content = readMarkdownFile(path)
-      const nextDocument = renderMarkdownDocument(content)
-      const message = createLiveUpdateMessage(previousDocument, nextDocument)
+      const nextBlocks = renderMarkdownBlocks(content)
+      const message = createLiveUpdateMessage(previousBlocks, nextBlocks)
 
-      previousDocument = nextDocument
+      previousBlocks = nextBlocks
 
       if (!message) {
         return

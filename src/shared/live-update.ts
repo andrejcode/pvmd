@@ -5,11 +5,6 @@ export interface LiveUpdateBlock {
   html: string
 }
 
-export interface LiveUpdateDocument {
-  blocks: LiveUpdateBlock[]
-  html: string
-}
-
 export type LiveUpdateOperation =
   | {
       type: 'insert'

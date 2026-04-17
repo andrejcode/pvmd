@@ -10,12 +10,14 @@ const RENAME_RETRY_LIMIT = 10
 const {
   watchMock,
   readMarkdownFileMock,
-  renderMarkdownDocumentMock,
+  renderBlocksHtmlMock,
+  renderMarkdownBlocksMock,
   validateMarkdownPathMock,
 } = vi.hoisted(() => ({
   watchMock: vi.fn(),
   readMarkdownFileMock: vi.fn(),
-  renderMarkdownDocumentMock: vi.fn(),
+  renderBlocksHtmlMock: vi.fn(),
+  renderMarkdownBlocksMock: vi.fn(),
   validateMarkdownPathMock: vi.fn(),
 }))
 
@@ -25,7 +27,8 @@ vi.mock('node:fs', () => ({
 
 vi.mock('../../markdown', () => ({
   readMarkdownFile: readMarkdownFileMock,
-  renderMarkdownDocument: renderMarkdownDocumentMock,
+  renderBlocksHtml: renderBlocksHtmlMock,
+  renderMarkdownBlocks: renderMarkdownBlocksMock,
   validateMarkdownPath: validateMarkdownPathMock,
 }))
 
@@ -71,10 +74,12 @@ describe('createWatcher', () => {
     })
 
     readMarkdownFileMock.mockReturnValue('# Hello')
-    renderMarkdownDocumentMock.mockReturnValue({
-      blocks: [{ id: 'block-1', html: '<h1>Hello</h1>' }],
-      html: '<div data-pvmd-block-id="block-1"><h1>Hello</h1></div>',
-    })
+    renderMarkdownBlocksMock.mockReturnValue([
+      { id: 'block-1', html: '<h1>Hello</h1>' },
+    ])
+    renderBlocksHtmlMock.mockReturnValue(
+      '<div data-pvmd-block-id="block-1"><h1>Hello</h1></div>',
+    )
     validateMarkdownPathMock.mockReturnValue(undefined)
 
     processExitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
@@ -89,7 +94,8 @@ describe('createWatcher', () => {
     vi.restoreAllMocks()
     watchMock.mockReset()
     readMarkdownFileMock.mockReset()
-    renderMarkdownDocumentMock.mockReset()
+    renderBlocksHtmlMock.mockReset()
+    renderMarkdownBlocksMock.mockReset()
     validateMarkdownPathMock.mockReset()
   })
 
@@ -115,23 +121,24 @@ describe('createWatcher', () => {
 
     expect(readMarkdownFileMock).toHaveBeenCalledTimes(1)
     expect(readMarkdownFileMock).toHaveBeenCalledWith('/tmp/file.md')
-    expect(renderMarkdownDocumentMock).toHaveBeenCalledTimes(1)
-    expect(renderMarkdownDocumentMock).toHaveBeenCalledWith('# Hello')
+    expect(renderMarkdownBlocksMock).toHaveBeenCalledTimes(1)
+    expect(renderMarkdownBlocksMock).toHaveBeenCalledWith('# Hello')
     expect(client.write).toHaveBeenCalledWith(
       'data: {"kind":"full","html":"<div data-pvmd-block-id=\\"block-1\\"><h1>Hello</h1></div>"}\n\n',
     )
   })
 
   test('sends patch operations after the first rendered document', () => {
-    renderMarkdownDocumentMock
-      .mockReturnValueOnce({
-        blocks: [{ id: 'block-1', html: '<h1>Hello</h1>' }],
-        html: '<div data-pvmd-block-id="block-1"><h1>Hello</h1></div>',
-      })
-      .mockReturnValueOnce({
-        blocks: [{ id: 'block-2', html: '<h1>Hello world</h1>' }],
-        html: '<div data-pvmd-block-id="block-2"><h1>Hello world</h1></div>',
-      })
+    renderMarkdownBlocksMock
+      .mockReturnValueOnce([{ id: 'block-1', html: '<h1>Hello</h1>' }])
+      .mockReturnValueOnce([{ id: 'block-2', html: '<h1>Hello world</h1>' }])
+    renderBlocksHtmlMock
+      .mockReturnValueOnce(
+        '<div data-pvmd-block-id="block-1"><h1>Hello</h1></div>',
+      )
+      .mockReturnValueOnce(
+        '<div data-pvmd-block-id="block-2"><h1>Hello world</h1></div>',
+      )
 
     const watcher = createWatcher('/tmp/file.md')
     const client = createMockClient()
@@ -160,7 +167,7 @@ describe('createWatcher', () => {
     vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)
 
     expect(readMarkdownFileMock).not.toHaveBeenCalled()
-    expect(renderMarkdownDocumentMock).not.toHaveBeenCalled()
+    expect(renderMarkdownBlocksMock).not.toHaveBeenCalled()
   })
 
   test('rename reattaches the watcher when the same path becomes valid again', () => {
@@ -259,7 +266,7 @@ describe('createWatcher', () => {
       'Process exited with code 1',
     )
 
-    expect(renderMarkdownDocumentMock).not.toHaveBeenCalled()
+    expect(renderMarkdownBlocksMock).not.toHaveBeenCalled()
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'File is too large: /tmp/file.md',
     )

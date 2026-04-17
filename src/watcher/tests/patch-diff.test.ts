@@ -1,12 +1,12 @@
-import { renderMarkdownDocument } from '../../markdown'
+import { renderMarkdownBlocks } from '../../markdown'
 import { createLiveUpdateMessage } from '../patch-diff'
 
 describe('createLiveUpdateMessage', () => {
   test('emits a patch when only rendered footnotes change', () => {
-    const previous = renderMarkdownDocument(
+    const previous = renderMarkdownBlocks(
       'Paragraph with note[^1].\n\n[^1]: First',
     )
-    const next = renderMarkdownDocument(
+    const next = renderMarkdownBlocks(
       'Paragraph with note[^1].\n\n[^1]: Second',
     )
 

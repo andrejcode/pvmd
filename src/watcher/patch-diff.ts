@@ -1,22 +1,23 @@
+import { renderBlocksHtml } from '@/markdown'
 import {
   LIVE_BLOCK_ATTRIBUTE,
-  type LiveUpdateDocument,
+  type LiveUpdateBlock,
   type LiveUpdateMessage,
   type LiveUpdateOperation,
 } from '@/shared/live-update'
 
 export function createLiveUpdateMessage(
-  previousDocument: LiveUpdateDocument | null,
-  nextDocument: LiveUpdateDocument,
+  previousBlocks: LiveUpdateBlock[] | null,
+  nextBlocks: LiveUpdateBlock[],
 ): LiveUpdateMessage | null {
-  if (!previousDocument) {
+  if (!previousBlocks) {
     return {
       kind: 'full',
-      html: nextDocument.html,
+      html: renderBlocksHtml(nextBlocks),
     }
   }
 
-  const ops = diffDocuments(previousDocument, nextDocument)
+  const ops = diffBlocks(previousBlocks, nextBlocks)
   if (ops.length === 0) {
     return null
   }
@@ -29,12 +30,12 @@ export function createLiveUpdateMessage(
 
 // Diff the old and new block sequences around their shared backbone so we only
 // emit insert/remove operations for the gaps between unchanged blocks.
-function diffDocuments(
-  previousDocument: LiveUpdateDocument,
-  nextDocument: LiveUpdateDocument,
+function diffBlocks(
+  previousBlocks: LiveUpdateBlock[],
+  nextBlocks: LiveUpdateBlock[],
 ): LiveUpdateOperation[] {
-  const previousIds = previousDocument.blocks.map((block) => block.id)
-  const nextIds = nextDocument.blocks.map((block) => block.id)
+  const previousIds = previousBlocks.map((block) => block.id)
+  const nextIds = nextBlocks.map((block) => block.id)
   const matches = findLongestCommonSubsequence(previousIds, nextIds)
   const ops: LiveUpdateOperation[] = []
 
@@ -58,7 +59,7 @@ function diffDocuments(
 
       ops.push({
         type: 'insert',
-        html: wrapBlockForInsertion(nextDocument.blocks[nextIndex]!),
+        html: wrapBlockForInsertion(nextBlocks[nextIndex]!),
         ...(beforeBlockId ? { beforeBlockId } : {}),
       })
       nextIndex += 1
@@ -125,8 +126,6 @@ function findLongestCommonSubsequence(
   return matches
 }
 
-function wrapBlockForInsertion(
-  block: LiveUpdateDocument['blocks'][number],
-): string {
+function wrapBlockForInsertion(block: LiveUpdateBlock): string {
   return `<div ${LIVE_BLOCK_ATTRIBUTE}="${block.id}">${block.html}</div>`
 }

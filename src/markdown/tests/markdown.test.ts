@@ -11,16 +11,17 @@ import { join } from 'node:path'
 import {
   clearRenderCaches,
   readMarkdownFile,
-  renderMarkdownDocument,
+  renderBlocksHtml,
+  renderMarkdownBlocks,
 } from '../index'
 
 function renderMarkdown(markdown: string): string {
-  return renderMarkdownDocument(markdown)
-    .blocks.map((block) => block.html)
+  return renderMarkdownBlocks(markdown)
+    .map((block) => block.html)
     .join('')
 }
 
-describe('renderMarkdownDocument', () => {
+describe('renderMarkdownBlocks', () => {
   // prettier-ignore
   test('should correctly parse headings', () => {
     expect(renderMarkdown('# Heading 1')).toContain('<h1 id="heading-1">Heading 1</h1>')
@@ -36,17 +37,17 @@ describe('renderMarkdownDocument', () => {
 
   test('should keep heading ids stable in rendered markdown blocks', () => {
     const markdown = '# Heading\n\n[Jump](#heading)'
-    const result = renderMarkdownDocument(markdown)
+    const result = renderMarkdownBlocks(markdown)
 
-    expect(result.blocks[0]?.html).toContain('<h1 id="heading">Heading</h1>')
-    expect(result.blocks[1]?.html).toContain('<a href="#heading">Jump</a>')
+    expect(result[0]?.html).toContain('<h1 id="heading">Heading</h1>')
+    expect(result[1]?.html).toContain('<a href="#heading">Jump</a>')
   })
 
   test('should reset heading ids between rendered markdown documents', () => {
-    expect(renderMarkdownDocument('# Heading').blocks[0]?.html).toContain(
+    expect(renderMarkdownBlocks('# Heading')[0]?.html).toContain(
       '<h1 id="heading">Heading</h1>',
     )
-    expect(renderMarkdownDocument('# Heading').blocks[0]?.html).toContain(
+    expect(renderMarkdownBlocks('# Heading')[0]?.html).toContain(
       '<h1 id="heading">Heading</h1>',
     )
   })
@@ -204,9 +205,9 @@ describe('renderMarkdownDocument', () => {
 
     test('should preserve syntax highlighting in rendered markdown blocks', () => {
       const markdown = '```javascript\nconst x = 1;\n```'
-      const result = renderMarkdownDocument(markdown)
+      const result = renderMarkdownBlocks(markdown)
 
-      expect(result.blocks[0]?.html).toContain(
+      expect(result[0]?.html).toContain(
         '<pre><code class="language-javascript"><span class="pl-k">const</span>',
       )
     })
@@ -252,41 +253,40 @@ describe('renderMarkdownDocument', () => {
 
     test('should preserve GitHub-style alerts in rendered markdown blocks', () => {
       const markdown = '> [!NOTE]\n> hello alert'
-      const result = renderMarkdownDocument(markdown)
+      const result = renderMarkdownBlocks(markdown)
 
-      expect(result.blocks[0]?.html).toContain(
+      expect(result[0]?.html).toContain(
         '<div class="markdown-alert markdown-alert-note">',
       )
-      expect(result.blocks[0]?.html).toContain(
-        '<p class="markdown-alert-title">',
-      )
-      expect(result.blocks[0]?.html).toContain('Note</p>')
-      expect(result.blocks[0]?.html).toContain('<p>hello alert</p>')
+      expect(result[0]?.html).toContain('<p class="markdown-alert-title">')
+      expect(result[0]?.html).toContain('Note</p>')
+      expect(result[0]?.html).toContain('<p>hello alert</p>')
     })
 
     test('should render footnotes after referenced content in rendered markdown blocks', () => {
       const markdown = 'Paragraph with note[^1].\n\n[^1]: Footnote text'
-      const result = renderMarkdownDocument(markdown)
+      const result = renderMarkdownBlocks(markdown)
+      const html = renderBlocksHtml(result)
 
-      expect(result.html.indexOf('Paragraph with note')).toBeLessThan(
-        result.html.indexOf('<section class="footnotes"'),
+      expect(html.indexOf('Paragraph with note')).toBeLessThan(
+        html.indexOf('<section class="footnotes"'),
       )
-      expect(result.html).toContain('href="#footnote-1"')
-      expect(result.html).toContain('id="footnote-1"')
+      expect(html).toContain('href="#footnote-1"')
+      expect(html).toContain('id="footnote-1"')
     })
 
     test('should update rendered footnotes when footnote content changes', () => {
-      const previous = renderMarkdownDocument(
+      const previous = renderMarkdownBlocks(
         'Paragraph with note[^1].\n\n[^1]: First',
       )
-      const next = renderMarkdownDocument(
+      const next = renderMarkdownBlocks(
         'Paragraph with note[^1].\n\n[^1]: Second',
       )
 
-      const previousFootnotes = previous.blocks.find((block) =>
+      const previousFootnotes = previous.find((block) =>
         block.html.includes('<section class="footnotes"'),
       )
-      const nextFootnotes = next.blocks.find((block) =>
+      const nextFootnotes = next.find((block) =>
         block.html.includes('<section class="footnotes"'),
       )
 
@@ -309,15 +309,15 @@ describe('renderMarkdownDocument', () => {
     })
 
     test('should preserve inline math in rendered markdown blocks', () => {
-      const result = renderMarkdownDocument('This is $E = mc^2$ inline.')
-      expect(result.blocks[0]?.html).toContain('class="katex"')
-      expect(result.blocks[0]?.html).toContain('<math')
+      const result = renderMarkdownBlocks('This is $E = mc^2$ inline.')
+      expect(result[0]?.html).toContain('class="katex"')
+      expect(result[0]?.html).toContain('<math')
     })
 
     test('should preserve block math in rendered markdown blocks', () => {
-      const result = renderMarkdownDocument('$$\n\\frac{a}{b}\n$$')
-      expect(result.blocks[0]?.html).toContain('class="katex-display"')
-      expect(result.blocks[0]?.html).toContain('<math')
+      const result = renderMarkdownBlocks('$$\n\\frac{a}{b}\n$$')
+      expect(result[0]?.html).toContain('class="katex-display"')
+      expect(result[0]?.html).toContain('<math')
     })
   })
 
@@ -461,56 +461,54 @@ const example = 'code block';
 
     test('should produce identical heading ids from cached and uncached renders', () => {
       const markdown = '# Heading\n\n## Subheading\n\n### Heading'
-      const first = renderMarkdownDocument(markdown)
+      const first = renderMarkdownBlocks(markdown)
       clearRenderCaches()
-      const second = renderMarkdownDocument(markdown)
+      const second = renderMarkdownBlocks(markdown)
 
-      expect(first.html).toBe(second.html)
-      expect(first.blocks.map((b) => b.id)).toEqual(
-        second.blocks.map((b) => b.id),
-      )
+      expect(renderBlocksHtml(first)).toBe(renderBlocksHtml(second))
+      expect(first.map((b) => b.id)).toEqual(second.map((b) => b.id))
     })
 
     test('should produce identical heading ids on repeated render without cache clear', () => {
       const markdown = '# Title\n\nSome text.\n\n# Title'
-      const first = renderMarkdownDocument(markdown)
-      const second = renderMarkdownDocument(markdown)
+      const first = renderMarkdownBlocks(markdown)
+      const second = renderMarkdownBlocks(markdown)
 
-      expect(first.html).toBe(second.html)
-      expect(first.blocks.map((b) => b.html)).toEqual(
-        second.blocks.map((b) => b.html),
-      )
+      expect(renderBlocksHtml(first)).toBe(renderBlocksHtml(second))
+      expect(first.map((b) => b.html)).toEqual(second.map((b) => b.html))
     })
 
     test('should produce identical footnote output from cached and uncached renders', () => {
       const markdown = 'Text with note[^1].\n\n[^1]: Footnote text'
-      const first = renderMarkdownDocument(markdown)
+      const first = renderMarkdownBlocks(markdown)
       clearRenderCaches()
-      const second = renderMarkdownDocument(markdown)
+      const second = renderMarkdownBlocks(markdown)
+      const firstHtml = renderBlocksHtml(first)
+      const secondHtml = renderBlocksHtml(second)
 
-      expect(first.html).toBe(second.html)
-      expect(first.html).toContain('href="#footnote-1"')
-      expect(first.html).toContain('id="footnote-1"')
+      expect(firstHtml).toBe(secondHtml)
+      expect(firstHtml).toContain('href="#footnote-1"')
+      expect(firstHtml).toContain('id="footnote-1"')
     })
 
     test('should produce identical syntax-highlighted code block output from cached and uncached renders', () => {
       const markdown = '```javascript\nconst x = 1;\n```'
-      const first = renderMarkdownDocument(markdown)
+      const first = renderMarkdownBlocks(markdown)
       clearRenderCaches()
-      const second = renderMarkdownDocument(markdown)
+      const second = renderMarkdownBlocks(markdown)
 
-      expect(first.html).toBe(second.html)
-      expect(first.blocks[0]?.html).toContain(
+      expect(renderBlocksHtml(first)).toBe(renderBlocksHtml(second))
+      expect(first[0]?.html).toContain(
         '<pre><code class="language-javascript"><span class="pl-k">const</span>',
       )
     })
 
     test('should return different blocks for different code content after cache clear', () => {
-      const first = renderMarkdownDocument('```javascript\nconst x = 1;\n```')
+      const first = renderMarkdownBlocks('```javascript\nconst x = 1;\n```')
       clearRenderCaches()
-      const second = renderMarkdownDocument('```javascript\nconst y = 2;\n```')
+      const second = renderMarkdownBlocks('```javascript\nconst y = 2;\n```')
 
-      expect(first.blocks[0]?.html).not.toBe(second.blocks[0]?.html)
+      expect(first[0]?.html).not.toBe(second[0]?.html)
     })
   })
 })

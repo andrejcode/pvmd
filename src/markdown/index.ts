@@ -12,7 +12,6 @@ import markedKatex from 'marked-katex-extension'
 import {
   LIVE_BLOCK_ATTRIBUTE,
   type LiveUpdateBlock,
-  type LiveUpdateDocument,
 } from '@/shared/live-update'
 import { processFileSystemError } from '@/utils/file-error'
 import { validateFile, validateMarkdownExtension } from './file-validation'
@@ -84,7 +83,7 @@ marked.use(
 
 type MarkdownToken = ReturnType<typeof marked.lexer>[number]
 
-export function renderMarkdownDocument(content: string): LiveUpdateDocument {
+export function renderMarkdownBlocks(content: string): LiveUpdateBlock[] {
   const normalizedContent = preprocessMarkdownContent(
     normalizeMarkdownContent(content),
   )
@@ -113,10 +112,11 @@ export function renderMarkdownDocument(content: string): LiveUpdateDocument {
     })
   }
 
-  return {
-    blocks,
-    html: blocks.map((block) => wrapBlock(block.id, block.html)).join(''),
-  }
+  return blocks
+}
+
+export function renderBlocksHtml(blocks: readonly LiveUpdateBlock[]): string {
+  return blocks.map((block) => wrapBlock(block.id, block.html)).join('')
 }
 
 function readFile(path: string): string {

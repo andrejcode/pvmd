@@ -2,7 +2,8 @@ import { run } from '../app'
 import { config, DEFAULT_CONFIG } from '../cli/config'
 import {
   readMarkdownFile,
-  renderMarkdownDocument,
+  renderBlocksHtml,
+  renderMarkdownBlocks,
   validateMarkdownPath,
 } from '../markdown'
 import { createServer, startServer } from '../server'
@@ -13,7 +14,8 @@ import createWatcher from '../watcher'
 vi.mock('../markdown', () => ({
   validateMarkdownPath: vi.fn(),
   readMarkdownFile: vi.fn(),
-  renderMarkdownDocument: vi.fn(),
+  renderMarkdownBlocks: vi.fn(),
+  renderBlocksHtml: vi.fn(),
 }))
 
 vi.mock('../server', () => ({
@@ -63,10 +65,8 @@ describe('run', () => {
       handleSSE: vi.fn(),
     })
     vi.mocked(readMarkdownFile).mockReturnValue('# Hello')
-    vi.mocked(renderMarkdownDocument).mockReturnValue({
-      html: '<h1>Hello</h1>',
-      blocks: [],
-    })
+    vi.mocked(renderMarkdownBlocks).mockReturnValue([])
+    vi.mocked(renderBlocksHtml).mockReturnValue('<h1>Hello</h1>')
     vi.mocked(createServer).mockImplementation((getHTML) => {
       getHTML()
       return {} as never

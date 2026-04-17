@@ -3,7 +3,8 @@ import { dirname } from 'node:path'
 import { config } from './cli/config'
 import {
   readMarkdownFile,
-  renderMarkdownDocument,
+  renderBlocksHtml,
+  renderMarkdownBlocks,
   validateMarkdownPath,
 } from './markdown'
 import { createServer, startServer } from './server'
@@ -35,8 +36,8 @@ export function run(userPath: string) {
 
   const getHTML = () => {
     const markdownContent = readMarkdownFile(fullPath)
-    const renderedMarkdown = renderMarkdownDocument(markdownContent)
-    return prepareHTML(fullPath, renderedMarkdown.html, config.theme)
+    const blocks = renderMarkdownBlocks(markdownContent)
+    return prepareHTML(fullPath, renderBlocksHtml(blocks), config.theme)
   }
 
   const server = createServer(getHTML, watcher?.handleSSE, dirname(fullPath))
