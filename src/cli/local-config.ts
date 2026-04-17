@@ -33,6 +33,10 @@ export const osPaths = {
   homedir: () => homedir(),
 }
 
+function warnLocalConfig(message: string) {
+  console.warn(`Warning: ${message}`)
+}
+
 export function findLocalConfigPath(homeDirectory = osPaths.homedir()) {
   const candidatePath = resolve(
     homeDirectory,
@@ -57,7 +61,10 @@ export function loadLocalConfig(homeDirectory = osPaths.homedir()) {
   try {
     parsedConfig = JSON.parse(fileSystem.readFileSync(configPath))
   } catch {
-    throw new Error(`${LOCAL_CONFIG_RELATIVE_PATH} must be valid JSON.`)
+    warnLocalConfig(
+      `${LOCAL_CONFIG_RELATIVE_PATH} must be valid JSON. Ignoring local config.`,
+    )
+    return null
   }
 
   applyLocalConfig(parsedConfig)
@@ -66,45 +73,52 @@ export function loadLocalConfig(homeDirectory = osPaths.homedir()) {
 
 export function applyLocalConfig(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`${LOCAL_CONFIG_RELATIVE_PATH} must contain a JSON object.`)
+    warnLocalConfig(
+      `${LOCAL_CONFIG_RELATIVE_PATH} must contain a JSON object. Ignoring local config.`,
+    )
+    return
   }
 
   const overrides = value as Record<string, unknown>
 
   for (const [key, rawValue] of Object.entries(overrides)) {
-    switch (key) {
-      case 'port':
-        config.port = parseConfigNumber(key, rawValue, parsePortValue)
-        break
-      case 'skipSizeCheck':
-        config.skipSizeCheck = parseConfigBoolean(key, rawValue)
-        break
-      case 'maxFileSizeMB':
-        config.maxFileSizeMB = parseConfigNumber(
-          key,
-          rawValue,
-          parseMaxFileSizeValue,
-        )
-        break
-      case 'watch':
-        config.watch = parseConfigBoolean(key, rawValue)
-        break
-      case 'httpsOnly':
-        config.httpsOnly = parseConfigBoolean(key, rawValue)
-        break
-      case 'open':
-        config.open = parseConfigBoolean(key, rawValue)
-        break
-      case 'browser':
-        config.browser = parseConfigString(key, rawValue, parseBrowserValue)
-        break
-      case 'theme':
-        config.theme = parseConfigString(key, rawValue, parseThemeValue)
-        break
-      default:
-        throw new Error(
-          `Unsupported setting "${key}" in ${LOCAL_CONFIG_RELATIVE_PATH}. Supported settings: ${CONFIG_KEYS.join(', ')}.`,
-        )
+    try {
+      switch (key) {
+        case 'port':
+          config.port = parseConfigNumber(key, rawValue, parsePortValue)
+          break
+        case 'skipSizeCheck':
+          config.skipSizeCheck = parseConfigBoolean(key, rawValue)
+          break
+        case 'maxFileSizeMB':
+          config.maxFileSizeMB = parseConfigNumber(
+            key,
+            rawValue,
+            parseMaxFileSizeValue,
+          )
+          break
+        case 'watch':
+          config.watch = parseConfigBoolean(key, rawValue)
+          break
+        case 'httpsOnly':
+          config.httpsOnly = parseConfigBoolean(key, rawValue)
+          break
+        case 'open':
+          config.open = parseConfigBoolean(key, rawValue)
+          break
+        case 'browser':
+          config.browser = parseConfigString(key, rawValue, parseBrowserValue)
+          break
+        case 'theme':
+          config.theme = parseConfigString(key, rawValue, parseThemeValue)
+          break
+        default:
+          warnLocalConfig(
+            `Unsupported setting "${key}" in ${LOCAL_CONFIG_RELATIVE_PATH}. Supported settings: ${CONFIG_KEYS.join(', ')}. Ignoring setting.`,
+          )
+      }
+    } catch (error) {
+      warnLocalConfig((error as Error).message + ' Ignoring setting.')
     }
   }
 }

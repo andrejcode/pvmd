@@ -5,18 +5,30 @@ import { fileSystem, osPaths } from '../local-config'
 
 describe('parseArguments', () => {
   let consoleLogSpy: MockInstance
+  let consoleWarnSpy: MockInstance
   let processExitSpy: MockInstance
+  const originalExistsSync = fileSystem.existsSync
+  const originalReadFileSync = fileSystem.readFileSync
+  const originalHomedir = osPaths.homedir
 
   beforeEach(() => {
     Object.assign(config, DEFAULT_CONFIG)
+    osPaths.homedir = vi.fn(() => '/Users/tester')
+    fileSystem.existsSync = vi.fn(() => false)
+    fileSystem.readFileSync = originalReadFileSync
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     processExitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new Error(`Process exited with code ${code}`)
     })
   })
 
   afterEach(() => {
+    fileSystem.existsSync = originalExistsSync
+    fileSystem.readFileSync = originalReadFileSync
+    osPaths.homedir = originalHomedir
     consoleLogSpy.mockRestore()
+    consoleWarnSpy.mockRestore()
     processExitSpy.mockRestore()
   })
 
@@ -88,6 +100,31 @@ describe('parseArguments', () => {
     fileSystem.existsSync = originalExistsSync
     fileSystem.readFileSync = originalReadFileSync
     osPaths.homedir = originalHomedir
+  })
+
+  test('should print help even when local config is invalid', () => {
+    fileSystem.existsSync = vi.fn(
+      (path) => String(path) === '/Users/tester/.pvmd/config.json',
+    )
+    fileSystem.readFileSync = vi.fn(() => {
+      return JSON.stringify({
+        port: 6666,
+      })
+    })
+
+    expect(() => parseArguments(['--help'])).toThrow(
+      'Process exited with code 0',
+    )
+
+    const output = consoleLogSpy.mock.calls.flat().join('\n')
+
+    expect(output).toContain('Usage: pvmd [options] <file>')
+    expect(output).toContain(
+      'Port number (default: 8765; use 0 for a random available port)',
+    )
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Warning: Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Please choose a different port. Ignoring setting.',
+    )
   })
 
   test('should print version if --version or -v is provided', () => {
@@ -282,23 +319,16 @@ describe('parseArguments', () => {
     })
   })
 
-  test('should throw when local config is invalid', () => {
-    const originalExistsSync = fileSystem.existsSync
-    const originalReadFileSync = fileSystem.readFileSync
-    const originalHomedir = osPaths.homedir
-    osPaths.homedir = vi.fn(() => '/Users/tester')
+  test('should warn and ignore invalid local config JSON', () => {
     fileSystem.existsSync = vi.fn(
       (path) => String(path) === '/Users/tester/.pvmd/config.json',
     )
     fileSystem.readFileSync = vi.fn(() => '{invalid json')
 
-    expect(() => parseArguments(['test.md'])).toThrow(
-      '.pvmd/config.json must be valid JSON.',
+    expect(parseArguments(['test.md'])).toBe('test.md')
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Warning: .pvmd/config.json must be valid JSON. Ignoring local config.',
     )
-
-    fileSystem.existsSync = originalExistsSync
-    fileSystem.readFileSync = originalReadFileSync
-    osPaths.homedir = originalHomedir
   })
 
   describe('size options', () => {
