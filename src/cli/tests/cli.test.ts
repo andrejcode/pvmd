@@ -63,7 +63,7 @@ describe('parseArguments', () => {
       return JSON.stringify({
         port: 8123,
         skipSizeCheck: true,
-        maxFileSizeMB: 5,
+        maxFileSize: 640,
         watch: false,
         httpsOnly: true,
         open: true,
@@ -82,7 +82,7 @@ describe('parseArguments', () => {
       'Port number (default: 8123; use 0 for a random available port)',
     )
     expect(output).toContain('Skip file size validation (default: true)')
-    expect(output).toContain('Maximum file size in MB (default: 5)')
+    expect(output).toContain('Maximum file size in KB (default: 640)')
     expect(output).toContain('Skip file watching (default: true)')
     expect(output).toContain(
       'Only allow HTTPS URLs for images and links (default: true)',
@@ -367,7 +367,7 @@ describe('parseArguments', () => {
 
     test('should update the config if an option is provided', () => {
       parseArguments(['test.md', '--max-size', '10'])
-      expect(config.maxFileSizeMB).toBe(10)
+      expect(config.maxFileSize).toBe(10)
     })
   })
 })

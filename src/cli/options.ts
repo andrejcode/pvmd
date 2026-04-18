@@ -30,10 +30,10 @@ export const options: Record<string, Option> = {
     },
   },
   'max-size': {
-    value: '<mb>',
+    value: '<kb>',
     takesValue: true,
     action: (value?: string) => {
-      config.maxFileSizeMB = parseMaxFileSizeValue(value)
+      config.maxFileSize = parseMaxFileSizeValue(value)
     },
   },
   'no-watch': {
@@ -81,7 +81,7 @@ function getOptionDescription(key: string) {
     case 'no-size-check':
       return `Skip file size validation (default: ${formatEnabledDefault(config.skipSizeCheck)})`
     case 'max-size':
-      return `Maximum file size in MB (default: ${config.maxFileSizeMB})`
+      return `Maximum file size in KB (default: ${config.maxFileSize})`
     case 'no-watch':
       return `Skip file watching (default: ${formatEnabledDefault(!config.watch)})`
     case 'https-only':

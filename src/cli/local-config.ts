@@ -16,7 +16,7 @@ import {
 const CONFIG_KEYS = [
   'port',
   'skipSizeCheck',
-  'maxFileSizeMB',
+  'maxFileSize',
   'watch',
   'httpsOnly',
   'open',
@@ -86,8 +86,8 @@ export function applyLocalConfig(value: unknown) {
         case 'skipSizeCheck':
           config.skipSizeCheck = parseConfigBoolean(key, rawValue)
           break
-        case 'maxFileSizeMB':
-          config.maxFileSizeMB = parseConfigNumber(
+        case 'maxFileSize':
+          config.maxFileSize = parseConfigNumber(
             key,
             rawValue,
             parseMaxFileSizeValue,

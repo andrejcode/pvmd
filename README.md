@@ -115,7 +115,7 @@ The built-in defaults below are the fallback values when no local config is pres
 ```text
 -p, --port <port>       Port number (default: 8765; use 0 for a random port)
 --no-size-check         Skip file size validation
---max-size <mb>         Maximum file size in MB (default: 2)
+--max-size <kb>         Maximum file size in KB (default: 512)
 --no-watch              Skip file watching
 --https-only            Only allow HTTPS URLs for images and links
 -o, --open              Open in default browser automatically
@@ -144,7 +144,7 @@ The CLI looks for `.pvmd/config.json` in your OS user home directory
 
 There is only one shared config location for the current user. Those config values override the built-in defaults, and explicit CLI flags override the config.
 
-Supported config keys are: `port`, `skipSizeCheck`, `maxFileSizeMB`, `watch`, `httpsOnly`, `open`, `browser`, and `theme`.
+Supported config keys are: `port`, `skipSizeCheck`, `maxFileSize`, `watch`, `httpsOnly`, `open`, `browser`, and `theme`.
 
 Example:
 

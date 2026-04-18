@@ -27,7 +27,7 @@ export const LOCAL_CONFIG_RELATIVE_PATH = `${LOCAL_CONFIG_DIRECTORY_NAME}/${LOCA
 export interface Config {
   port: number
   skipSizeCheck: boolean
-  maxFileSizeMB: number
+  maxFileSize: number
   watch: boolean
   httpsOnly: boolean
   open: boolean
@@ -38,7 +38,7 @@ export interface Config {
 export const DEFAULT_CONFIG: Config = {
   port: 8765,
   skipSizeCheck: false,
-  maxFileSizeMB: 2,
+  maxFileSize: 512,
   watch: true,
   httpsOnly: false,
   open: false,

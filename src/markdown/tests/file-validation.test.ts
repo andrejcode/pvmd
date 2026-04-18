@@ -14,11 +14,11 @@ const VALID_MARKDOWN_EXTENSIONS = [
   '.mdtxt',
   '.mdtext',
 ]
-const DEFAULT_MAX_FILE_SIZE_MB = 2
+const DEFAULT_MAX_FILE_SIZE_KB = 512
 
 function resetFileValidationConfig() {
   config.skipSizeCheck = false
-  config.maxFileSizeMB = DEFAULT_MAX_FILE_SIZE_MB
+  config.maxFileSize = DEFAULT_MAX_FILE_SIZE_KB
 }
 
 describe('validateMarkdownExtension', () => {
@@ -108,50 +108,50 @@ describe('validateFile', () => {
   })
 
   test('should not throw an error when file size is within limit', () => {
-    const oneMB = 1024 * 1024
+    const oneHundredKB = 100 * 1024
     mockStats({
       isDirectory: false,
       isFile: true,
       isSymbolicLink: false,
-      size: oneMB,
+      size: oneHundredKB,
     })
     expect(() => validateFile('test.md')).not.toThrow()
   })
 
   test('should throw an error when file size exceeds limit', () => {
-    const threeMB = 3 * 1024 * 1024
+    const sixHundredKB = 600 * 1024
     mockStats({
       isDirectory: false,
       isFile: true,
       isSymbolicLink: false,
-      size: threeMB,
+      size: sixHundredKB,
     })
     expect(() => validateFile('test.md')).toThrow(
-      'File is too large: test.md. Maximum size is 2 MB.\nUse --no-size-check to disable file size validation or --max-size <mb> to raise the limit.',
+      'File is too large: test.md. Maximum size is 512 KB.\nUse --no-size-check to disable file size validation or --max-size <kb> to raise the limit.',
     )
   })
 
   test('should not throw an error when file size is exactly at limit', () => {
-    const exactlyTwoMB = 2 * 1024 * 1024
+    const exactlyFiveHundredTwelveKB = 512 * 1024
     mockStats({
       isDirectory: false,
       isFile: true,
       isSymbolicLink: false,
-      size: exactlyTwoMB,
+      size: exactlyFiveHundredTwelveKB,
     })
     expect(() => validateFile('test.md')).not.toThrow()
   })
 
   test('should throw an error when file size is just over limit', () => {
-    const justOverTwoMB = 2 * 1024 * 1024 + 1
+    const justOverFiveHundredTwelveKB = 512 * 1024 + 1
     mockStats({
       isDirectory: false,
       isFile: true,
       isSymbolicLink: false,
-      size: justOverTwoMB,
+      size: justOverFiveHundredTwelveKB,
     })
     expect(() => validateFile('test.md')).toThrow(
-      'File is too large: test.md. Maximum size is 2 MB.\nUse --no-size-check to disable file size validation or --max-size <mb> to raise the limit.',
+      'File is too large: test.md. Maximum size is 512 KB.\nUse --no-size-check to disable file size validation or --max-size <kb> to raise the limit.',
     )
   })
 
@@ -167,34 +167,34 @@ describe('validateFile', () => {
     expect(() => validateFile('test.md')).not.toThrow()
   })
 
-  test('should respect custom maxFileSizeMB setting', () => {
-    config.maxFileSizeMB = 5
-    const fourMB = 4 * 1024 * 1024
+  test('should respect custom maxFileSize setting', () => {
+    config.maxFileSize = 1024
+    const eightHundredKB = 800 * 1024
     mockStats({
       isDirectory: false,
       isFile: true,
       isSymbolicLink: false,
-      size: fourMB,
+      size: eightHundredKB,
     })
     expect(() => validateFile('test.md')).not.toThrow()
   })
 
-  test('should throw an error with custom maxFileSizeMB when exceeded', () => {
-    config.maxFileSizeMB = 5
-    const sixMB = 6 * 1024 * 1024
+  test('should throw an error with custom maxFileSize when exceeded', () => {
+    config.maxFileSize = 1024
+    const twelveHundredKB = 1200 * 1024
     mockStats({
       isDirectory: false,
       isFile: true,
       isSymbolicLink: false,
-      size: sixMB,
+      size: twelveHundredKB,
     })
     expect(() => validateFile('test.md')).toThrow(
-      'File is too large: test.md. Maximum size is 5 MB.\nUse --no-size-check to disable file size validation or --max-size <mb> to raise the limit.',
+      'File is too large: test.md. Maximum size is 1024 KB.\nUse --no-size-check to disable file size validation or --max-size <kb> to raise the limit.',
     )
   })
 
-  test('should format tiny maxFileSizeMB values without scientific notation', () => {
-    config.maxFileSizeMB = 0.00000001
+  test('should format tiny maxFileSize values without scientific notation', () => {
+    config.maxFileSize = 0.00000001
     mockStats({
       isDirectory: false,
       isFile: true,
@@ -203,7 +203,7 @@ describe('validateFile', () => {
     })
 
     expect(() => validateFile('test.md')).toThrow(
-      'File is too large: test.md. Maximum size is 0.00000001 MB.\nUse --no-size-check to disable file size validation or --max-size <mb> to raise the limit.',
+      'File is too large: test.md. Maximum size is 0.00000001 KB.\nUse --no-size-check to disable file size validation or --max-size <kb> to raise the limit.',
     )
   })
 
