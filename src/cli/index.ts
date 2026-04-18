@@ -1,9 +1,16 @@
 import { loadLocalConfig } from './local-config'
 import { resolveOption, showHelp } from './options'
 
+function shouldSkipLocalConfig(args: string[]) {
+  return args.includes('--no-local-config')
+}
+
 function handleHelp(args: string[]) {
   if (args.includes('--help') || args.includes('-h')) {
-    loadLocalConfig()
+    if (!shouldSkipLocalConfig(args)) {
+      loadLocalConfig()
+    }
+
     showHelp()
     process.exit(0)
   }
@@ -24,7 +31,10 @@ function handleVersion(args: string[]) {
 export function parseArguments(args: string[]) {
   handleHelp(args)
   handleVersion(args)
-  loadLocalConfig()
+
+  if (!shouldSkipLocalConfig(args)) {
+    loadLocalConfig()
+  }
 
   let userPath: string | null = null
 

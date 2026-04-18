@@ -29,6 +29,9 @@ export const options: Record<string, Option> = {
       config.skipSizeCheck = true
     },
   },
+  'no-local-config': {
+    action: () => {},
+  },
   'max-size': {
     value: '<kb>',
     takesValue: true,
@@ -80,6 +83,8 @@ function getOptionDescription(key: string) {
       return `Port number (default: ${config.port}; use 0 for a random available port)`
     case 'no-size-check':
       return `Skip file size validation (default: ${formatEnabledDefault(config.skipSizeCheck)})`
+    case 'no-local-config':
+      return 'Ignore ~/.pvmd/config.json and use built-in defaults as the baseline'
     case 'max-size':
       return `Maximum file size in KB (default: ${config.maxFileSize})`
     case 'no-watch':

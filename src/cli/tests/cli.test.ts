@@ -102,6 +102,49 @@ describe('parseArguments', () => {
     osPaths.homedir = originalHomedir
   })
 
+  test('should print built-in defaults when --no-local-config is provided with help', () => {
+    fileSystem.existsSync = vi.fn(
+      (path) => String(path) === '/Users/tester/.pvmd/config.json',
+    )
+    fileSystem.readFileSync = vi.fn(() => {
+      return JSON.stringify({
+        port: 8123,
+        skipSizeCheck: true,
+        maxFileSize: 640,
+        watch: false,
+        httpsOnly: true,
+        open: true,
+        browser: 'firefox',
+        theme: 'dark',
+      })
+    })
+
+    expect(() => parseArguments(['--help', '--no-local-config'])).toThrow(
+      'Process exited with code 0',
+    )
+
+    const output = consoleLogSpy.mock.calls.flat().join('\n')
+
+    expect(output).toContain(
+      'Port number (default: 8765; use 0 for a random available port)',
+    )
+    expect(output).toContain('Skip file size validation (default: false)')
+    expect(output).toContain('Maximum file size in KB (default: 512)')
+    expect(output).toContain('Skip file watching (default: false)')
+    expect(output).toContain(
+      'Only allow HTTPS URLs for images and links (default: false)',
+    )
+    expect(output).toContain(
+      'Open automatically in the selected browser (default: false)',
+    )
+    expect(output).toContain(
+      'Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: default)',
+    )
+    expect(output).toContain(
+      'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: default)',
+    )
+  })
+
   test('should print help even when local config is invalid', () => {
     fileSystem.existsSync = vi.fn(
       (path) => String(path) === '/Users/tester/.pvmd/config.json',
@@ -195,6 +238,35 @@ describe('parseArguments', () => {
     fileSystem.existsSync = originalExistsSync
     fileSystem.readFileSync = originalReadFileSync
     osPaths.homedir = originalHomedir
+  })
+
+  test('should skip local config when --no-local-config is provided', () => {
+    fileSystem.existsSync = vi.fn(
+      (path) => String(path) === '/Users/tester/.pvmd/config.json',
+    )
+    fileSystem.readFileSync = vi.fn(() => {
+      return JSON.stringify({
+        port: 8123,
+        open: true,
+        browser: 'firefox',
+        theme: 'dark',
+      })
+    })
+
+    const userPath = parseArguments([
+      'test.md',
+      '--no-local-config',
+      '--port',
+      '9000',
+      '--theme',
+      'light',
+    ])
+
+    expect(userPath).toBe('test.md')
+    expect(config.port).toBe(9000)
+    expect(config.open).toBe(false)
+    expect(config.browser).toBe('default')
+    expect(config.theme).toBe('light')
   })
 
   describe('port option', () => {

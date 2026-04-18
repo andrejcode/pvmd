@@ -110,11 +110,12 @@ For very large Markdown files with many lines, the first preview load can take l
 
 ## CLI Options
 
-The built-in defaults below are the fallback values when no local config is present. `pvmd --help` shows the effective defaults after applying `~/.pvmd/config.json`, and explicit CLI flags still take precedence.
+The built-in defaults below are the fallback values when no local config is present. `pvmd --help` shows the effective defaults after applying `~/.pvmd/config.json`, `pvmd --help --no-local-config` shows the built-in defaults directly, and explicit CLI flags still take precedence.
 
 ```text
 -p, --port <port>       Port number (default: 8765; use 0 for a random port)
 --no-size-check         Skip file size validation
+--no-local-config       Ignore ~/.pvmd/config.json and use built-in defaults as the baseline
 --max-size <kb>         Maximum file size in KB (default: 512)
 --no-watch              Skip file watching
 --https-only            Only allow HTTPS URLs for images and links
@@ -144,6 +145,8 @@ The CLI looks for `.pvmd/config.json` in your OS user home directory
 
 There is only one shared config location for the current user. Those config values override the built-in defaults, and explicit CLI flags override the config.
 
+If you want one run to ignore that file completely and start from the built-in defaults, pass `--no-local-config`.
+
 Supported config keys are: `port`, `skipSizeCheck`, `maxFileSize`, `watch`, `httpsOnly`, `open`, `browser`, and `theme`.
 
 Example:
@@ -159,7 +162,7 @@ Example:
 }
 ```
 
-Save that as `~/.pvmd/config.json`. Running `pvmd README.md` then uses those values automatically, while a command such as `pvmd README.md --port 8765 --theme light` still overrides the configured defaults.
+Save that as `~/.pvmd/config.json`. Running `pvmd README.md` then uses those values automatically, while a command such as `pvmd README.md --port 8765 --theme light` still overrides the configured defaults. If you want to ignore the home config for a run, use `pvmd README.md --no-local-config`.
 
 ## Security
 
