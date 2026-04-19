@@ -4,6 +4,7 @@ import {
   fileSystem,
   findLocalConfigPath,
   loadLocalConfig,
+  loadLocalConfigWithBlockedKeys,
   osPaths,
 } from '../local-config'
 
@@ -66,6 +67,33 @@ describe('local config', () => {
       browser: 'brave',
       theme: 'dark-dimmed',
     })
+
+    fileSystem.existsSync = originalExistsSync
+    fileSystem.readFileSync = originalReadFileSync
+    osPaths.homedir = originalHomedir
+  })
+
+  test('skips blocked keys while applying remaining local config settings', () => {
+    const originalExistsSync = fileSystem.existsSync
+    const originalReadFileSync = fileSystem.readFileSync
+    const originalHomedir = osPaths.homedir
+    osPaths.homedir = vi.fn(() => '/Users/tester')
+    fileSystem.existsSync = vi.fn(
+      (path) => String(path) === '/Users/tester/.pvmd/config.json',
+    )
+    fileSystem.readFileSync = vi.fn(() => {
+      return JSON.stringify({
+        port: 7777,
+        open: true,
+        browser: 'brave',
+      })
+    })
+
+    loadLocalConfigWithBlockedKeys(new Set(['port']))
+
+    expect(config.port).toBe(DEFAULT_CONFIG.port)
+    expect(config.open).toBe(true)
+    expect(config.browser).toBe('brave')
 
     fileSystem.existsSync = originalExistsSync
     fileSystem.readFileSync = originalReadFileSync

@@ -11,6 +11,15 @@ describe('parseArguments', () => {
   const originalReadFileSync = fileSystem.readFileSync
   const originalHomedir = osPaths.homedir
 
+  function mockLocalConfig(value: Record<string, unknown> | string) {
+    fileSystem.existsSync = vi.fn(
+      (path) => String(path) === '/Users/tester/.pvmd/config.json',
+    )
+    fileSystem.readFileSync = vi.fn(() => {
+      return typeof value === 'string' ? value : JSON.stringify(value)
+    })
+  }
+
   beforeEach(() => {
     Object.assign(config, DEFAULT_CONFIG)
     osPaths.homedir = vi.fn(() => '/Users/tester')
@@ -30,46 +39,35 @@ describe('parseArguments', () => {
     consoleLogSpy.mockRestore()
     consoleWarnSpy.mockRestore()
     processExitSpy.mockRestore()
+    vi.unstubAllEnvs()
   })
 
-  test('should print help if --help or -h is provided', () => {
+  test('prints help for --help and -h', () => {
     expect(() => parseArguments(['--help'])).toThrow(
       'Process exited with code 0',
     )
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining('Usage: pvmd [options] <file>'),
     )
-    expect(processExitSpy).toHaveBeenCalledWith(0)
 
     consoleLogSpy.mockClear()
-    processExitSpy.mockClear()
 
     expect(() => parseArguments(['-h'])).toThrow('Process exited with code 0')
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining('Usage: pvmd [options] <file>'),
     )
-    expect(processExitSpy).toHaveBeenCalledWith(0)
   })
 
-  test('should print help with effective defaults from local config', () => {
-    const originalExistsSync = fileSystem.existsSync
-    const originalReadFileSync = fileSystem.readFileSync
-    const originalHomedir = osPaths.homedir
-    osPaths.homedir = vi.fn(() => '/Users/tester')
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
-    )
-    fileSystem.readFileSync = vi.fn(() => {
-      return JSON.stringify({
-        port: 8123,
-        skipSizeCheck: true,
-        maxFileSize: 640,
-        watch: false,
-        httpsOnly: true,
-        open: true,
-        browser: 'firefox',
-        theme: 'dark',
-      })
+  test('prints help with effective defaults from local config', () => {
+    mockLocalConfig({
+      port: 8123,
+      skipSizeCheck: true,
+      maxFileSize: 640,
+      watch: false,
+      httpsOnly: true,
+      open: true,
+      browser: 'firefox',
+      theme: 'dark',
     })
 
     expect(() => parseArguments(['--help'])).toThrow(
@@ -96,18 +94,28 @@ describe('parseArguments', () => {
     expect(output).toContain(
       'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: dark)',
     )
-
-    fileSystem.existsSync = originalExistsSync
-    fileSystem.readFileSync = originalReadFileSync
-    osPaths.homedir = originalHomedir
   })
 
-  test('should print built-in defaults when --no-local-config is provided with help', () => {
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
+  test('applies valid scheduled CLI assignments before rendering help', () => {
+    expect(() => parseArguments(['--port', '9000', '--help'])).toThrow(
+      'Process exited with code 0',
     )
-    fileSystem.readFileSync = vi.fn(() => {
-      return JSON.stringify({
+
+    const output = consoleLogSpy.mock.calls.flat().join('\n')
+    expect(output).toContain(
+      'Port number (default: 9000; use 0 for a random available port)',
+    )
+  })
+
+  test.each([
+    ['-h', '--no-local-config'],
+    ['--help', '--no-local-config'],
+    ['--no-local-config', '-h'],
+    ['--no-local-config', '--help'],
+  ])(
+    'shows built-in help defaults when local config is skipped: %s %s',
+    (...args) => {
+      mockLocalConfig({
         port: 8123,
         skipSizeCheck: true,
         maxFileSize: 640,
@@ -117,110 +125,123 @@ describe('parseArguments', () => {
         browser: 'firefox',
         theme: 'dark',
       })
-    })
 
-    expect(() => parseArguments(['--help', '--no-local-config'])).toThrow(
+      expect(() => parseArguments(args)).toThrow('Process exited with code 0')
+
+      const output = consoleLogSpy.mock.calls.flat().join('\n')
+
+      expect(output).toContain(
+        'Port number (default: 8765; use 0 for a random available port)',
+      )
+      expect(output).toContain('Skip file size validation (default: false)')
+      expect(output).toContain('Maximum file size in KB (default: 512)')
+      expect(output).toContain('Skip file watching (default: false)')
+      expect(output).toContain(
+        'Only allow HTTPS URLs for images and links (default: false)',
+      )
+      expect(output).toContain(
+        'Open automatically in the selected browser (default: false)',
+      )
+      expect(output).toContain(
+        'Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: default)',
+      )
+      expect(output).toContain(
+        'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: default)',
+      )
+      expect(fileSystem.readFileSync).not.toHaveBeenCalled()
+
+      consoleLogSpy.mockClear()
+    },
+  )
+
+  test('shows help instead of duplicate-option errors when help appears later', () => {
+    expect(() => parseArguments(['--open', '--open', '--help'])).toThrow(
+      'Process exited with code 0',
+    )
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Usage: pvmd [options] <file>'),
+    )
+  })
+
+  test('shows help even when deferred validation would fail', () => {
+    expect(() => parseArguments(['--port', '-1', '--help'])).toThrow(
       'Process exited with code 0',
     )
 
     const output = consoleLogSpy.mock.calls.flat().join('\n')
-
     expect(output).toContain(
       'Port number (default: 8765; use 0 for a random available port)',
     )
-    expect(output).toContain('Skip file size validation (default: false)')
-    expect(output).toContain('Maximum file size in KB (default: 512)')
-    expect(output).toContain('Skip file watching (default: false)')
-    expect(output).toContain(
-      'Only allow HTTPS URLs for images and links (default: false)',
-    )
-    expect(output).toContain(
-      'Open automatically in the selected browser (default: false)',
-    )
-    expect(output).toContain(
-      'Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: default)',
-    )
-    expect(output).toContain(
-      'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: default)',
-    )
   })
 
-  test('should print help even when local config is invalid', () => {
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
-    )
-    fileSystem.readFileSync = vi.fn(() => {
-      return JSON.stringify({
-        port: 6666,
-      })
-    })
+  test('prints help even when local config is invalid', () => {
+    mockLocalConfig({ port: 6666 })
 
     expect(() => parseArguments(['--help'])).toThrow(
       'Process exited with code 0',
     )
 
-    const output = consoleLogSpy.mock.calls.flat().join('\n')
-
-    expect(output).toContain('Usage: pvmd [options] <file>')
-    expect(output).toContain(
-      'Port number (default: 8765; use 0 for a random available port)',
-    )
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       'Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
     )
   })
 
-  test('should print version if --version or -v is provided', () => {
-    const version = '0.0.0'
-    vi.stubEnv('PVMD_VERSION', version)
+  test('prints version for --version and -v', () => {
+    vi.stubEnv('PVMD_VERSION', '0.0.0')
 
     expect(() => parseArguments(['--version'])).toThrow(
       'Process exited with code 0',
     )
-
-    expect(consoleLogSpy).toHaveBeenCalledWith(`pvmd v${version}`)
-    expect(processExitSpy).toHaveBeenCalledWith(0)
+    expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
 
     consoleLogSpy.mockClear()
-    processExitSpy.mockClear()
 
     expect(() => parseArguments(['-v'])).toThrow('Process exited with code 0')
-    expect(consoleLogSpy).toHaveBeenCalledWith(`pvmd v${version}`)
-    expect(processExitSpy).toHaveBeenCalledWith(0)
+    expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
   })
 
-  test('should throw an error if no arguments are provided', () => {
+  test('prints version instead of duplicate-option errors', () => {
+    vi.stubEnv('PVMD_VERSION', '0.0.0')
+
+    expect(() => parseArguments(['--version', '--open', '--open'])).toThrow(
+      'Process exited with code 0',
+    )
+    expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
+  })
+
+  test('returns the first markdown path when parsing succeeds', () => {
+    expect(parseArguments(['test.md'])).toBe('test.md')
+  })
+
+  test('requires a markdown path when no terminal action is requested', () => {
     expect(() => parseArguments([])).toThrow(
       'Please provide a markdown file path as an argument',
     )
-  })
-
-  test('should throw an error if the first argument is empty string', () => {
     expect(() => parseArguments([''])).toThrow(
       'Please provide a markdown file path as an argument',
     )
   })
 
-  test('should return the correct arguments', () => {
-    expect(parseArguments(['test.md'])).toBe('test.md')
+  test('treats multiple markdown paths as an error', () => {
+    expect(() => parseArguments(['first.md', 'second.md'])).toThrow(
+      'Only one markdown file path may be provided.',
+    )
   })
 
-  test('should load local config before applying CLI flags', () => {
-    const originalExistsSync = fileSystem.existsSync
-    const originalReadFileSync = fileSystem.readFileSync
-    const originalHomedir = osPaths.homedir
-    osPaths.homedir = vi.fn(() => '/Users/tester')
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
+  test('shows help instead of multiple markdown path errors', () => {
+    expect(() => parseArguments(['first.md', 'second.md', '--help'])).toThrow(
+      'Process exited with code 0',
     )
-    fileSystem.readFileSync = vi.fn(() => {
-      return JSON.stringify({
-        port: 8123,
-        open: true,
-        browser: 'firefox',
-        theme: 'dark',
-      })
+  })
+
+  test('loads local config only for keys not specified on the CLI', () => {
+    mockLocalConfig({
+      port: 8123,
+      open: true,
+      browser: 'firefox',
+      theme: 'dark',
     })
+
     const userPath = parseArguments([
       'test.md',
       '--port',
@@ -234,28 +255,19 @@ describe('parseArguments', () => {
     expect(config.open).toBe(true)
     expect(config.browser).toBe('firefox')
     expect(config.theme).toBe('light')
-
-    fileSystem.existsSync = originalExistsSync
-    fileSystem.readFileSync = originalReadFileSync
-    osPaths.homedir = originalHomedir
   })
 
-  test('should skip local config when --no-local-config is provided', () => {
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
-    )
-    fileSystem.readFileSync = vi.fn(() => {
-      return JSON.stringify({
-        port: 8123,
-        open: true,
-        browser: 'firefox',
-        theme: 'dark',
-      })
+  test('skips local config entirely when --no-local-config is provided', () => {
+    mockLocalConfig({
+      port: 8123,
+      open: true,
+      browser: 'firefox',
+      theme: 'dark',
     })
 
     const userPath = parseArguments([
-      'test.md',
       '--no-local-config',
+      'test.md',
       '--port',
       '9000',
       '--theme',
@@ -269,139 +281,8 @@ describe('parseArguments', () => {
     expect(config.theme).toBe('light')
   })
 
-  describe('port option', () => {
-    test('should update the config if an option is provided', () => {
-      parseArguments(['test.md', '--port', '8080'])
-      expect(config.port).toBe(8080)
-    })
-
-    test('should allow port 0 to request a random available port', () => {
-      parseArguments(['test.md', '--port', '0'])
-      expect(config.port).toBe(0)
-    })
-
-    test('should throw an error if port number is out of range', () => {
-      expect(() => parseArguments(['test.md', '--port', '-1'])).toThrow(
-        'Port must be between 0 and 65535',
-      )
-
-      expect(() => parseArguments(['test.md', '--port', '70000'])).toThrow(
-        'Port must be between 0 and 65535',
-      )
-    })
-
-    test('should throw an error if port number is not numeric', () => {
-      expect(() => parseArguments(['test.md', '--port', 'abc'])).toThrow(
-        'Port must be a number',
-      )
-    })
-
-    test('should throw an error if port number is not an integer', () => {
-      expect(() => parseArguments(['test.md', '--port', '1234.5'])).toThrow(
-        'Port must be an integer',
-      )
-    })
-
-    test('should throw an error if port is blocked by browsers', () => {
-      expect(() => parseArguments(['test.md', '--port', '6000'])).toThrow(
-        'Port 6000 is blocked by browsers for security reasons.',
-      )
-    })
-
-    test('should throw an error if port number is not provided', () => {
-      expect(() => parseArguments(['test.md', '--port'])).toThrow(
-        'Port option requires a value',
-      )
-    })
-
-    test('should update config.port to the latest provided value', () => {
-      parseArguments(['test.md', '--port', '8080', '-p', '8081'])
-      expect(config.port).toBe(8081)
-    })
-  })
-
-  describe('https-only option', () => {
-    test('should set config.httpsOnly to true when --https-only is provided', () => {
-      parseArguments(['test.md', '--https-only'])
-      expect(config.httpsOnly).toBe(true)
-    })
-  })
-
-  describe('open option', () => {
-    test('should set config.open to true when --open is provided', () => {
-      parseArguments(['test.md', '--open'])
-      expect(config.open).toBe(true)
-    })
-
-    test('should set config.open to true when -o is provided', () => {
-      parseArguments(['test.md', '-o'])
-      expect(config.open).toBe(true)
-    })
-  })
-
-  describe('browser option', () => {
-    test('should set config.browser when --browser is provided', () => {
-      parseArguments(['test.md', '--browser', 'chrome'])
-      expect(config.browser).toBe('chrome')
-    })
-
-    test('should set config.browser when -b is provided', () => {
-      parseArguments(['test.md', '-b', 'firefox'])
-      expect(config.browser).toBe('firefox')
-    })
-
-    test('should normalize browser values to lowercase', () => {
-      parseArguments(['test.md', '--browser', 'BrAvE'])
-      expect(config.browser).toBe('brave')
-    })
-
-    test('should throw an error if browser value is not provided', () => {
-      expect(() => parseArguments(['test.md', '--browser'])).toThrow(
-        'Browser option requires a value. Supported browsers: default, chrome, firefox, edge, brave.',
-      )
-    })
-
-    test('should throw an error if browser is unsupported', () => {
-      expect(() => parseArguments(['test.md', '--browser', 'safari'])).toThrow(
-        'Unsupported browser "safari". Supported browsers: default, chrome, firefox, edge, brave.',
-      )
-    })
-  })
-
-  describe('theme option', () => {
-    test('should set config.theme when --theme is provided', () => {
-      parseArguments(['test.md', '--theme', 'dark'])
-      expect(config.theme).toBe('dark')
-    })
-
-    test('should set config.theme when -t is provided', () => {
-      parseArguments(['test.md', '-t', 'light-colorblind'])
-      expect(config.theme).toBe('light-colorblind')
-    })
-
-    test('should normalize theme values to lowercase', () => {
-      parseArguments(['test.md', '--theme', 'Dark-Dimmed'])
-      expect(config.theme).toBe('dark-dimmed')
-    })
-
-    test('should throw an error if theme value is not provided', () => {
-      expect(() => parseArguments(['test.md', '--theme'])).toThrow(
-        'Theme option requires a value. Supported themes: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind.',
-      )
-    })
-
-    test('should throw an error if theme is unsupported', () => {
-      expect(() => parseArguments(['test.md', '--theme', 'sepia'])).toThrow(
-        'Unsupported theme "sepia". Supported themes: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind.',
-      )
-    })
-  })
-
-  test('should warn and ignore invalid local config JSON', () => {
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
-    )
-    fileSystem.readFileSync = vi.fn(() => '{invalid json')
+  test('warns and ignores invalid local config JSON', () => {
+    mockLocalConfig('{invalid json')
 
     expect(parseArguments(['test.md'])).toBe('test.md')
     expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -409,37 +290,111 @@ describe('parseArguments', () => {
     )
   })
 
-  describe('size options', () => {
-    test('should update the config if an option is provided', () => {
-      parseArguments(['test.md', '--no-size-check'])
-      expect(config.skipSizeCheck).toBe(true)
-    })
+  test('accepts port 0 as a deferred valid port value', () => {
+    parseArguments(['test.md', '--port', '0'])
+    expect(config.port).toBe(0)
+  })
 
-    test('should throw an error if max size is not positive number', () => {
-      expect(() => parseArguments(['test.md', '--max-size', '0'])).toThrow(
-        'Max size must be a positive number',
-      )
+  test('validates port values during finalization', () => {
+    expect(() => parseArguments(['test.md', '--port', '-1'])).toThrow(
+      'Port must be between 0 and 65535.',
+    )
+    expect(() => parseArguments(['test.md', '--port', '70000'])).toThrow(
+      'Port must be between 0 and 65535.',
+    )
+    expect(() => parseArguments(['test.md', '--port', 'abc'])).toThrow(
+      'Port must be a number.',
+    )
+    expect(() => parseArguments(['test.md', '--port', '1234.5'])).toThrow(
+      'Port must be an integer.',
+    )
+    expect(() => parseArguments(['test.md', '--port', '6000'])).toThrow(
+      'Port 6000 is blocked by browsers for security reasons.',
+    )
+  })
 
-      expect(() => parseArguments(['test.md', '--max-size', '-1'])).toThrow(
-        'Max size must be a positive number',
-      )
-    })
+  test('treats a missing port value as a scan-time error', () => {
+    expect(() => parseArguments(['test.md', '--port'])).toThrow(
+      'Port option requires a value.',
+    )
+  })
 
-    test('should throw an error if max size is not valid', () => {
-      expect(() => parseArguments(['test.md', '--max-size', 'a'])).toThrow(
-        'Max size must be a positive number',
-      )
-    })
+  test('reports duplicate port options before deferred validation errors', () => {
+    expect(() =>
+      parseArguments(['test.md', '--port', '-1', '-p', '1234']),
+    ).toThrow('Option "--port" was provided multiple times.')
+  })
 
-    test('should throw an error if max size number is not provided', () => {
-      expect(() => parseArguments(['test.md', '--max-size'])).toThrow(
-        'Max size option requires a value',
-      )
-    })
+  test('reports duplicate boolean options as an error', () => {
+    expect(() => parseArguments(['test.md', '--open', '--open'])).toThrow(
+      'Option "--open" was provided multiple times.',
+    )
+  })
 
-    test('should update the config if an option is provided', () => {
-      parseArguments(['test.md', '--max-size', '10'])
-      expect(config.maxFileSize).toBe(10)
-    })
+  test('treats duplicate no-local-config as an error', () => {
+    expect(() =>
+      parseArguments(['test.md', '--no-local-config', '--no-local-config']),
+    ).toThrow('Option "--no-local-config" was provided multiple times.')
+  })
+
+  test('treats unknown options as an error when no terminal action is present', () => {
+    expect(() => parseArguments(['test.md', '--wat'])).toThrow(
+      'Unknown option: --wat',
+    )
+  })
+
+  test('finds help after an unknown option enters terminal-only mode', () => {
+    expect(() => parseArguments(['--wat', '--help'])).toThrow(
+      'Process exited with code 0',
+    )
+  })
+
+  test('sets boolean config options when provided once', () => {
+    parseArguments(['test.md', '--open', '--https-only', '--no-size-check'])
+    expect(config.open).toBe(true)
+    expect(config.httpsOnly).toBe(true)
+    expect(config.skipSizeCheck).toBe(true)
+  })
+
+  test('defers browser validation until finalization', () => {
+    parseArguments(['test.md', '--browser', 'BrAvE'])
+    expect(config.browser).toBe('brave')
+
+    expect(() => parseArguments(['test.md', '--browser'])).toThrow(
+      'Browser option requires a value. Supported browsers: default, chrome, firefox, edge, brave.',
+    )
+    expect(() => parseArguments(['test.md', '--browser', 'safari'])).toThrow(
+      'Unsupported browser "safari". Supported browsers: default, chrome, firefox, edge, brave.',
+    )
+  })
+
+  test('defers theme validation until finalization', () => {
+    parseArguments(['test.md', '--theme', 'Dark-Dimmed'])
+    expect(config.theme).toBe('dark-dimmed')
+
+    expect(() => parseArguments(['test.md', '--theme'])).toThrow(
+      'Theme option requires a value. Supported themes: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind.',
+    )
+    expect(() => parseArguments(['test.md', '--theme', 'sepia'])).toThrow(
+      'Unsupported theme "sepia". Supported themes: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind.',
+    )
+  })
+
+  test('defers max-size validation until finalization', () => {
+    parseArguments(['test.md', '--max-size', '10'])
+    expect(config.maxFileSize).toBe(10)
+
+    expect(() => parseArguments(['test.md', '--max-size'])).toThrow(
+      'Max size option requires a value.',
+    )
+    expect(() => parseArguments(['test.md', '--max-size', '0'])).toThrow(
+      'Max size must be a positive number.',
+    )
+    expect(() => parseArguments(['test.md', '--max-size', '-1'])).toThrow(
+      'Max size must be a positive number.',
+    )
+    expect(() => parseArguments(['test.md', '--max-size', 'a'])).toThrow(
+      'Max size must be a positive number.',
+    )
   })
 })

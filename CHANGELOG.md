@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Renamed the config setting `maxFileSizeMB` to `maxFileSize`, changed `--max-size` and config values to kilobytes, and lowered the built-in default size limit to 512 KB.
 - Updated `pvmd --help` so option defaults reflect the effective values after applying `~/.pvmd/config.json`, while explicit CLI flags still override those configured defaults.
 - Added `--no-local-config` so a single run can ignore `~/.pvmd/config.json` and start from the built-in defaults instead.
+- Reworked CLI parsing into a single-pass scheduler that keeps `--help` and `--version` terminal actions high-priority, skips local config for help when `--no-local-config` is present in any order, fills local config only for options not set on the CLI, and rejects repeated options or multiple Markdown file paths with direct errors.
 - Split markdown rendering into block generation and HTML assembly helpers so the app and watcher share the same block model while only building full HTML strings when they are actually needed.
 
 ### Fixed

@@ -110,7 +110,7 @@ For very large Markdown files with many lines, the first preview load can take l
 
 ## CLI Options
 
-The built-in defaults below are the fallback values when no local config is present. `pvmd --help` shows the effective defaults after applying `~/.pvmd/config.json`, `pvmd --help --no-local-config` shows the built-in defaults directly, and explicit CLI flags still take precedence.
+The built-in defaults below are the fallback values when no local config is present. `pvmd --help` shows the effective defaults after applying `~/.pvmd/config.json`, and help with `--no-local-config` shows the built-in defaults directly regardless of flag order. Explicit CLI flags still take precedence.
 
 ```text
 -p, --port <port>       Port number (default: 8765; use 0 for a random port)
@@ -129,6 +129,8 @@ The built-in defaults below are the fallback values when no local config is pres
 Supported browser values: `default`, `chrome`, `firefox`, `edge`, `brave`.
 
 Supported theme values: `default`, `light`, `dark`, `dark-dimmed`, `dark-high-contrast`, `dark-colorblind`, `light-colorblind`.
+
+Each CLI option may be provided at most once per command, and `pvmd` accepts exactly one Markdown file path.
 
 If you omit `--theme`, `pvmd` uses the package default stylesheet, which switches automatically between GitHub's light and dark variants based on the system `prefers-color-scheme` setting.
 

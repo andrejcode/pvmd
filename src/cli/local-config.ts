@@ -24,6 +24,10 @@ const CONFIG_KEYS = [
   'theme',
 ] satisfies Array<keyof Config>
 
+function isConfigKey(value: string): value is keyof Config {
+  return CONFIG_KEYS.includes(value as keyof Config)
+}
+
 export const fileSystem = {
   existsSync: (path: string) => fs.existsSync(path),
   readFileSync: (path: string) => fs.readFileSync(path, 'utf8'),
@@ -67,7 +71,32 @@ export function loadLocalConfig(homeDirectory = osPaths.homedir()) {
   return configPath
 }
 
-export function applyLocalConfig(value: unknown) {
+export function loadLocalConfigWithBlockedKeys(
+  blockedKeys?: ReadonlySet<keyof Config>,
+) {
+  const configPath = findLocalConfigPath()
+  if (!configPath) {
+    return null
+  }
+
+  let parsedConfig: unknown
+  try {
+    parsedConfig = JSON.parse(fileSystem.readFileSync(configPath))
+  } catch {
+    console.warn(
+      `${LOCAL_CONFIG_RELATIVE_PATH} must be valid JSON. Ignoring local config.`,
+    )
+    return null
+  }
+
+  applyLocalConfig(parsedConfig, blockedKeys)
+  return configPath
+}
+
+export function applyLocalConfig(
+  value: unknown,
+  blockedKeys?: ReadonlySet<keyof Config>,
+) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     console.warn(
       `${LOCAL_CONFIG_RELATIVE_PATH} must contain a JSON object. Ignoring local config.`,
@@ -78,6 +107,10 @@ export function applyLocalConfig(value: unknown) {
   const overrides = value as Record<string, unknown>
 
   for (const [key, rawValue] of Object.entries(overrides)) {
+    if (isConfigKey(key) && blockedKeys?.has(key)) {
+      continue
+    }
+
     try {
       switch (key) {
         case 'port':
