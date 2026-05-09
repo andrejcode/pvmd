@@ -23,8 +23,18 @@ body {
   max-width: min(980px, 100%);
   width: 100%;
   margin: 0 auto;
-  padding: 0 45px;
+  padding: 45px;
   overflow-x: hidden;
+}
+
+#markdown-content > :first-child,
+#markdown-content > [data-pvmd-block-id]:first-child > :first-child {
+  margin-top: 0 !important;
+}
+
+#markdown-content > :last-child,
+#markdown-content > [data-pvmd-block-id]:last-child > :last-child {
+  margin-bottom: 0 !important;
 }
 
 .markdown-body pre {
@@ -70,7 +80,7 @@ body {
 
 @media (max-width: 767px) {
   #markdown-content {
-    padding: 0 15px;
+    padding: 15px;
   }
 }
 
