@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Stopped invalid `~/.pvmd/config.json` files and invalid local config entries from aborting startup. `pvmd` now warns and ignores malformed JSON, unknown settings, and invalid setting values while continuing with built-in defaults or any remaining valid config values.
+- Restored GitHub-style preview padding so documents start with comfortable spacing while first headings no longer add extra top margin.
 
 ## 0.2.4 - 2026-04-05
 
