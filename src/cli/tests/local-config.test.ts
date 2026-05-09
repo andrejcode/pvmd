@@ -9,41 +9,39 @@ import {
 } from '../local-config'
 
 describe('local config', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>
+  const originalExistsSync = fileSystem.existsSync
+  const originalReadFileSync = fileSystem.readFileSync
+  const originalHomedir = osPaths.homedir
+  const testConfigPath = '/Users/tester/.pvmd/config.json'
+
+  function mockLocalConfigFile(value: Record<string, unknown> | string = {}) {
+    osPaths.homedir = vi.fn(() => '/Users/tester')
+    fileSystem.existsSync = vi.fn((path) => String(path) === testConfigPath)
+    fileSystem.readFileSync = vi.fn(() => {
+      return typeof value === 'string' ? value : JSON.stringify(value)
+    })
+  }
 
   beforeEach(() => {
     Object.assign(config, DEFAULT_CONFIG)
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
   afterEach(() => {
+    fileSystem.existsSync = originalExistsSync
+    fileSystem.readFileSync = originalReadFileSync
+    osPaths.homedir = originalHomedir
     vi.restoreAllMocks()
   })
 
   test('finds the global .pvmd/config.json in the user home directory', () => {
-    const originalExistsSync = fileSystem.existsSync
-    const originalHomedir = osPaths.homedir
-    osPaths.homedir = vi.fn(() => '/Users/tester')
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
-    )
+    mockLocalConfigFile()
 
-    expect(findLocalConfigPath()).toBe('/Users/tester/.pvmd/config.json')
-
-    fileSystem.existsSync = originalExistsSync
-    osPaths.homedir = originalHomedir
+    expect(findLocalConfigPath()).toBe(testConfigPath)
   })
 
-  test('applies supported settings from local config', () => {
-    const originalExistsSync = fileSystem.existsSync
-    const originalReadFileSync = fileSystem.readFileSync
-    const originalHomedir = osPaths.homedir
-    osPaths.homedir = vi.fn(() => '/Users/tester')
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
-    )
-    fileSystem.readFileSync = vi.fn(() => {
-      return JSON.stringify({
+  describe('loading config files', () => {
+    test('applies supported settings from local config', () => {
+      mockLocalConfigFile({
         port: 7777,
         skipSizeCheck: true,
         maxFileSize: 640,
@@ -53,109 +51,93 @@ describe('local config', () => {
         browser: 'brave',
         theme: 'dark-dimmed',
       })
+
+      loadLocalConfig()
+
+      expect(config).toMatchObject({
+        port: 7777,
+        skipSizeCheck: true,
+        maxFileSize: 640,
+        watch: false,
+        httpsOnly: true,
+        open: true,
+        browser: 'brave',
+      })
+      expect(config.theme).toBe('dark-dimmed')
     })
 
-    loadLocalConfig()
-
-    expect(config).toMatchObject({
-      port: 7777,
-      skipSizeCheck: true,
-      maxFileSize: 640,
-      watch: false,
-      httpsOnly: true,
-      open: true,
-      browser: 'brave',
-      theme: 'dark-dimmed',
-    })
-
-    fileSystem.existsSync = originalExistsSync
-    fileSystem.readFileSync = originalReadFileSync
-    osPaths.homedir = originalHomedir
-  })
-
-  test('skips blocked keys while applying remaining local config settings', () => {
-    const originalExistsSync = fileSystem.existsSync
-    const originalReadFileSync = fileSystem.readFileSync
-    const originalHomedir = osPaths.homedir
-    osPaths.homedir = vi.fn(() => '/Users/tester')
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
-    )
-    fileSystem.readFileSync = vi.fn(() => {
-      return JSON.stringify({
+    test('skips blocked keys while applying remaining local config settings', () => {
+      mockLocalConfigFile({
         port: 7777,
         open: true,
         browser: 'brave',
       })
+
+      loadLocalConfigWithBlockedKeys(new Set(['port']))
+
+      expect(config.port).toBe(DEFAULT_CONFIG.port)
+      expect(config.open).toBe(true)
+      expect(config.browser).toBe('brave')
     })
 
-    loadLocalConfigWithBlockedKeys(new Set(['port']))
+    test('warns and ignores invalid JSON local config files', () => {
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {})
 
-    expect(config.port).toBe(DEFAULT_CONFIG.port)
-    expect(config.open).toBe(true)
-    expect(config.browser).toBe('brave')
+      mockLocalConfigFile('{invalid json')
 
-    fileSystem.existsSync = originalExistsSync
-    fileSystem.readFileSync = originalReadFileSync
-    osPaths.homedir = originalHomedir
+      loadLocalConfig()
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '.pvmd/config.json must be valid JSON. Ignoring local config.',
+      )
+      expect(config).toMatchObject(DEFAULT_CONFIG)
+    })
   })
 
-  test('warns on unsupported settings and ignores them', () => {
-    applyLocalConfig({ nope: true })
+  describe('applying parsed config', () => {
+    let consoleWarnSpy: ReturnType<typeof vi.spyOn>
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Unsupported setting "nope" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSize, watch, httpsOnly, open, browser, theme. Ignoring setting.',
-    )
-    expect(config).toMatchObject(DEFAULT_CONFIG)
-  })
-
-  test('warns on invalid boolean settings and ignores them', () => {
-    applyLocalConfig({ open: 'yes' })
-
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Invalid setting "open" in .pvmd/config.json. Expected a boolean. Ignoring setting.',
-    )
-    expect(config.open).toBe(DEFAULT_CONFIG.open)
-  })
-
-  test('applies valid settings and ignores invalid ones', () => {
-    applyLocalConfig({
-      port: 6666,
-      theme: 'dark',
-      unknownConfig: 1234,
-      open: true,
+    beforeEach(() => {
+      consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     })
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
-    )
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Unsupported setting "unknownConfig" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSize, watch, httpsOnly, open, browser, theme. Ignoring setting.',
-    )
-    expect(config.port).toBe(DEFAULT_CONFIG.port)
-    expect(config.theme).toBe('dark')
-    expect(config.open).toBe(true)
-  })
+    test('warns on unsupported settings and ignores them', () => {
+      applyLocalConfig({ nope: true })
 
-  test('warns and ignores invalid JSON local config files', () => {
-    const originalExistsSync = fileSystem.existsSync
-    const originalReadFileSync = fileSystem.readFileSync
-    const originalHomedir = osPaths.homedir
-    osPaths.homedir = vi.fn(() => '/Users/tester')
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
-    )
-    fileSystem.readFileSync = vi.fn(() => '{invalid json')
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Unsupported setting "nope" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSize, watch, httpsOnly, open, browser, theme. Ignoring setting.',
+      )
+      expect(config).toMatchObject(DEFAULT_CONFIG)
+    })
 
-    loadLocalConfig()
+    test('warns on invalid boolean settings and ignores them', () => {
+      applyLocalConfig({ open: 'yes' })
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      '.pvmd/config.json must be valid JSON. Ignoring local config.',
-    )
-    expect(config).toMatchObject(DEFAULT_CONFIG)
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Invalid setting "open" in .pvmd/config.json. Expected a boolean. Ignoring setting.',
+      )
+      expect(config.open).toBe(DEFAULT_CONFIG.open)
+    })
 
-    fileSystem.existsSync = originalExistsSync
-    fileSystem.readFileSync = originalReadFileSync
-    osPaths.homedir = originalHomedir
+    test('applies valid settings and ignores invalid ones', () => {
+      applyLocalConfig({
+        port: 6666,
+        theme: 'dark',
+        unknownConfig: 1234,
+        open: true,
+      })
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
+      )
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Unsupported setting "unknownConfig" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSize, watch, httpsOnly, open, browser, theme. Ignoring setting.',
+      )
+      expect(config.port).toBe(DEFAULT_CONFIG.port)
+      expect(config.theme).toBe('dark')
+      expect(config.open).toBe(true)
+    })
   })
 })

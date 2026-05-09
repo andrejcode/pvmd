@@ -4,17 +4,13 @@ import { parseArguments } from '../index'
 import { fileSystem, osPaths } from '../local-config'
 
 describe('parseArguments', () => {
-  let consoleLogSpy: MockInstance
-  let consoleWarnSpy: MockInstance
-  let processExitSpy: MockInstance
   const originalExistsSync = fileSystem.existsSync
   const originalReadFileSync = fileSystem.readFileSync
   const originalHomedir = osPaths.homedir
+  const testConfigPath = '/Users/tester/.pvmd/config.json'
 
   function mockLocalConfig(value: Record<string, unknown> | string) {
-    fileSystem.existsSync = vi.fn(
-      (path) => String(path) === '/Users/tester/.pvmd/config.json',
-    )
+    fileSystem.existsSync = vi.fn((path) => String(path) === testConfigPath)
     fileSystem.readFileSync = vi.fn(() => {
       return typeof value === 'string' ? value : JSON.stringify(value)
     })
@@ -25,96 +21,43 @@ describe('parseArguments', () => {
     osPaths.homedir = vi.fn(() => '/Users/tester')
     fileSystem.existsSync = vi.fn(() => false)
     fileSystem.readFileSync = originalReadFileSync
-    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    processExitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
-      throw new Error(`Process exited with code ${code}`)
-    })
   })
 
   afterEach(() => {
     fileSystem.existsSync = originalExistsSync
     fileSystem.readFileSync = originalReadFileSync
     osPaths.homedir = originalHomedir
-    consoleLogSpy.mockRestore()
-    consoleWarnSpy.mockRestore()
-    processExitSpy.mockRestore()
+    vi.restoreAllMocks()
     vi.unstubAllEnvs()
   })
 
-  test('prints help for --help and -h', () => {
-    expect(() => parseArguments(['--help'])).toThrow(
-      'Process exited with code 0',
-    )
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Usage: pvmd [options] <file>'),
-    )
+  describe('terminal help output', () => {
+    let consoleLogSpy: MockInstance
 
-    consoleLogSpy.mockClear()
-
-    expect(() => parseArguments(['-h'])).toThrow('Process exited with code 0')
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Usage: pvmd [options] <file>'),
-    )
-  })
-
-  test('prints help with effective defaults from local config', () => {
-    mockLocalConfig({
-      port: 8123,
-      skipSizeCheck: true,
-      maxFileSize: 640,
-      watch: false,
-      httpsOnly: true,
-      open: true,
-      browser: 'firefox',
-      theme: 'dark',
+    beforeEach(() => {
+      consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      vi.spyOn(process, 'exit').mockImplementation((code) => {
+        throw new Error(`Process exited with code ${code}`)
+      })
     })
 
-    expect(() => parseArguments(['--help'])).toThrow(
-      'Process exited with code 0',
-    )
+    test('prints help for --help and -h', () => {
+      expect(() => parseArguments(['--help'])).toThrow(
+        'Process exited with code 0',
+      )
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Usage: pvmd [options] <file>'),
+      )
 
-    const output = consoleLogSpy.mock.calls.flat().join('\n')
+      consoleLogSpy.mockClear()
 
-    expect(output).toContain(
-      'Port number (default: 8123; use 0 for a random available port)',
-    )
-    expect(output).toContain('Skip file size validation (default: true)')
-    expect(output).toContain('Maximum file size in KB (default: 640)')
-    expect(output).toContain('Skip file watching (default: true)')
-    expect(output).toContain(
-      'Only allow HTTPS URLs for images and links (default: true)',
-    )
-    expect(output).toContain(
-      'Open automatically in the selected browser (default: true)',
-    )
-    expect(output).toContain(
-      'Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: firefox)',
-    )
-    expect(output).toContain(
-      'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: dark)',
-    )
-  })
+      expect(() => parseArguments(['-h'])).toThrow('Process exited with code 0')
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Usage: pvmd [options] <file>'),
+      )
+    })
 
-  test('applies valid scheduled CLI assignments before rendering help', () => {
-    expect(() => parseArguments(['--port', '9000', '--help'])).toThrow(
-      'Process exited with code 0',
-    )
-
-    const output = consoleLogSpy.mock.calls.flat().join('\n')
-    expect(output).toContain(
-      'Port number (default: 9000; use 0 for a random available port)',
-    )
-  })
-
-  test.each([
-    ['-h', '--no-local-config'],
-    ['--help', '--no-local-config'],
-    ['--no-local-config', '-h'],
-    ['--no-local-config', '--help'],
-  ])(
-    'shows built-in help defaults when local config is skipped: %s %s',
-    (...args) => {
+    test('prints help with effective defaults from local config', () => {
       mockLocalConfig({
         port: 8123,
         skipSizeCheck: true,
@@ -126,87 +69,168 @@ describe('parseArguments', () => {
         theme: 'dark',
       })
 
-      expect(() => parseArguments(args)).toThrow('Process exited with code 0')
+      expect(() => parseArguments(['--help'])).toThrow(
+        'Process exited with code 0',
+      )
 
       const output = consoleLogSpy.mock.calls.flat().join('\n')
 
       expect(output).toContain(
+        'Port number (default: 8123; use 0 for a random available port)',
+      )
+      expect(output).toContain('Skip file size validation (default: true)')
+      expect(output).toContain('Maximum file size in KB (default: 640)')
+      expect(output).toContain('Skip file watching (default: true)')
+      expect(output).toContain(
+        'Only allow HTTPS URLs for images and links (default: true)',
+      )
+      expect(output).toContain(
+        'Open automatically in the selected browser (default: true)',
+      )
+      expect(output).toContain(
+        'Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: firefox)',
+      )
+      expect(output).toContain(
+        'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: dark)',
+      )
+    })
+
+    test('applies valid scheduled CLI assignments before rendering help', () => {
+      expect(() => parseArguments(['--port', '9000', '--help'])).toThrow(
+        'Process exited with code 0',
+      )
+
+      const output = consoleLogSpy.mock.calls.flat().join('\n')
+      expect(output).toContain(
+        'Port number (default: 9000; use 0 for a random available port)',
+      )
+    })
+
+    test.each([
+      ['-h', '--no-local-config'],
+      ['--help', '--no-local-config'],
+      ['--no-local-config', '-h'],
+      ['--no-local-config', '--help'],
+    ])(
+      'shows built-in help defaults when local config is skipped: %s %s',
+      (...args) => {
+        mockLocalConfig({
+          port: 8123,
+          skipSizeCheck: true,
+          maxFileSize: 640,
+          watch: false,
+          httpsOnly: true,
+          open: true,
+          browser: 'firefox',
+          theme: 'dark',
+        })
+
+        expect(() => parseArguments(args)).toThrow('Process exited with code 0')
+
+        const output = consoleLogSpy.mock.calls.flat().join('\n')
+
+        expect(output).toContain(
+          'Port number (default: 8765; use 0 for a random available port)',
+        )
+        expect(output).toContain('Skip file size validation (default: false)')
+        expect(output).toContain('Maximum file size in KB (default: 512)')
+        expect(output).toContain('Skip file watching (default: false)')
+        expect(output).toContain(
+          'Only allow HTTPS URLs for images and links (default: false)',
+        )
+        expect(output).toContain(
+          'Open automatically in the selected browser (default: false)',
+        )
+        expect(output).toContain(
+          'Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: default)',
+        )
+        expect(output).toContain(
+          'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: default)',
+        )
+        expect(fileSystem.readFileSync).not.toHaveBeenCalled()
+
+        consoleLogSpy.mockClear()
+      },
+    )
+
+    test('shows help instead of duplicate-option errors when help appears later', () => {
+      expect(() => parseArguments(['--open', '--open', '--help'])).toThrow(
+        'Process exited with code 0',
+      )
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Usage: pvmd [options] <file>'),
+      )
+    })
+
+    test('shows help even when deferred validation would fail', () => {
+      expect(() => parseArguments(['--port', '-1', '--help'])).toThrow(
+        'Process exited with code 0',
+      )
+
+      const output = consoleLogSpy.mock.calls.flat().join('\n')
+      expect(output).toContain(
         'Port number (default: 8765; use 0 for a random available port)',
       )
-      expect(output).toContain('Skip file size validation (default: false)')
-      expect(output).toContain('Maximum file size in KB (default: 512)')
-      expect(output).toContain('Skip file watching (default: false)')
-      expect(output).toContain(
-        'Only allow HTTPS URLs for images and links (default: false)',
+    })
+
+    test('prints help even when local config is invalid', () => {
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {})
+
+      mockLocalConfig({ port: 6666 })
+
+      expect(() => parseArguments(['--help'])).toThrow(
+        'Process exited with code 0',
       )
-      expect(output).toContain(
-        'Open automatically in the selected browser (default: false)',
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
       )
-      expect(output).toContain(
-        'Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: default)',
+    })
+
+    test('shows help instead of multiple markdown path errors', () => {
+      expect(() => parseArguments(['first.md', 'second.md', '--help'])).toThrow(
+        'Process exited with code 0',
       )
-      expect(output).toContain(
-        'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: default)',
+    })
+
+    test('finds help after an unknown option enters terminal-only mode', () => {
+      expect(() => parseArguments(['--wat', '--help'])).toThrow(
+        'Process exited with code 0',
       )
-      expect(fileSystem.readFileSync).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('terminal version output', () => {
+    let consoleLogSpy: MockInstance
+
+    beforeEach(() => {
+      vi.stubEnv('PVMD_VERSION', '0.0.0')
+      consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      vi.spyOn(process, 'exit').mockImplementation((code) => {
+        throw new Error(`Process exited with code ${code}`)
+      })
+    })
+
+    test('prints version for --version and -v', () => {
+      expect(() => parseArguments(['--version'])).toThrow(
+        'Process exited with code 0',
+      )
+      expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
 
       consoleLogSpy.mockClear()
-    },
-  )
 
-  test('shows help instead of duplicate-option errors when help appears later', () => {
-    expect(() => parseArguments(['--open', '--open', '--help'])).toThrow(
-      'Process exited with code 0',
-    )
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Usage: pvmd [options] <file>'),
-    )
-  })
+      expect(() => parseArguments(['-v'])).toThrow('Process exited with code 0')
+      expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
+    })
 
-  test('shows help even when deferred validation would fail', () => {
-    expect(() => parseArguments(['--port', '-1', '--help'])).toThrow(
-      'Process exited with code 0',
-    )
-
-    const output = consoleLogSpy.mock.calls.flat().join('\n')
-    expect(output).toContain(
-      'Port number (default: 8765; use 0 for a random available port)',
-    )
-  })
-
-  test('prints help even when local config is invalid', () => {
-    mockLocalConfig({ port: 6666 })
-
-    expect(() => parseArguments(['--help'])).toThrow(
-      'Process exited with code 0',
-    )
-
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
-    )
-  })
-
-  test('prints version for --version and -v', () => {
-    vi.stubEnv('PVMD_VERSION', '0.0.0')
-
-    expect(() => parseArguments(['--version'])).toThrow(
-      'Process exited with code 0',
-    )
-    expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
-
-    consoleLogSpy.mockClear()
-
-    expect(() => parseArguments(['-v'])).toThrow('Process exited with code 0')
-    expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
-  })
-
-  test('prints version instead of duplicate-option errors', () => {
-    vi.stubEnv('PVMD_VERSION', '0.0.0')
-
-    expect(() => parseArguments(['--version', '--open', '--open'])).toThrow(
-      'Process exited with code 0',
-    )
-    expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
+    test('prints version instead of duplicate-option errors', () => {
+      expect(() => parseArguments(['--version', '--open', '--open'])).toThrow(
+        'Process exited with code 0',
+      )
+      expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
+    })
   })
 
   test('returns the first markdown path when parsing succeeds', () => {
@@ -228,66 +252,66 @@ describe('parseArguments', () => {
     )
   })
 
-  test('shows help instead of multiple markdown path errors', () => {
-    expect(() => parseArguments(['first.md', 'second.md', '--help'])).toThrow(
-      'Process exited with code 0',
-    )
-  })
+  describe('local config integration', () => {
+    test('loads local config only for keys not specified on the CLI', () => {
+      mockLocalConfig({
+        port: 8123,
+        open: true,
+        browser: 'firefox',
+        theme: 'dark',
+      })
 
-  test('loads local config only for keys not specified on the CLI', () => {
-    mockLocalConfig({
-      port: 8123,
-      open: true,
-      browser: 'firefox',
-      theme: 'dark',
+      const userPath = parseArguments([
+        'test.md',
+        '--port',
+        '9000',
+        '--theme',
+        'light',
+      ])
+
+      expect(userPath).toBe('test.md')
+      expect(config.port).toBe(9000)
+      expect(config.open).toBe(true)
+      expect(config.browser).toBe('firefox')
+      expect(config.theme).toBe('light')
     })
 
-    const userPath = parseArguments([
-      'test.md',
-      '--port',
-      '9000',
-      '--theme',
-      'light',
-    ])
+    test('skips local config entirely when --no-local-config is provided', () => {
+      mockLocalConfig({
+        port: 8123,
+        open: true,
+        browser: 'firefox',
+        theme: 'dark',
+      })
 
-    expect(userPath).toBe('test.md')
-    expect(config.port).toBe(9000)
-    expect(config.open).toBe(true)
-    expect(config.browser).toBe('firefox')
-    expect(config.theme).toBe('light')
-  })
+      const userPath = parseArguments([
+        '--no-local-config',
+        'test.md',
+        '--port',
+        '9000',
+        '--theme',
+        'light',
+      ])
 
-  test('skips local config entirely when --no-local-config is provided', () => {
-    mockLocalConfig({
-      port: 8123,
-      open: true,
-      browser: 'firefox',
-      theme: 'dark',
+      expect(userPath).toBe('test.md')
+      expect(config.port).toBe(9000)
+      expect(config.open).toBe(false)
+      expect(config.browser).toBe('default')
+      expect(config.theme).toBe('light')
     })
 
-    const userPath = parseArguments([
-      '--no-local-config',
-      'test.md',
-      '--port',
-      '9000',
-      '--theme',
-      'light',
-    ])
+    test('warns and ignores invalid local config JSON', () => {
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {})
 
-    expect(userPath).toBe('test.md')
-    expect(config.port).toBe(9000)
-    expect(config.open).toBe(false)
-    expect(config.browser).toBe('default')
-    expect(config.theme).toBe('light')
-  })
+      mockLocalConfig('{invalid json')
 
-  test('warns and ignores invalid local config JSON', () => {
-    mockLocalConfig('{invalid json')
-
-    expect(parseArguments(['test.md'])).toBe('test.md')
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      '.pvmd/config.json must be valid JSON. Ignoring local config.',
-    )
+      expect(parseArguments(['test.md'])).toBe('test.md')
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '.pvmd/config.json must be valid JSON. Ignoring local config.',
+      )
+    })
   })
 
   test('accepts port 0 as a deferred valid port value', () => {
@@ -340,12 +364,6 @@ describe('parseArguments', () => {
   test('treats unknown options as an error when no terminal action is present', () => {
     expect(() => parseArguments(['test.md', '--wat'])).toThrow(
       'Unknown option: --wat',
-    )
-  })
-
-  test('finds help after an unknown option enters terminal-only mode', () => {
-    expect(() => parseArguments(['--wat', '--help'])).toThrow(
-      'Process exited with code 0',
     )
   })
 
