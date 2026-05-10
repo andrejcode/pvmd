@@ -20,6 +20,13 @@
     <!-- STYLE_OUTLET -->
   </head>
   <body class="markdown-body">
+    <div id="disconnected-alert" hidden>
+      <span id="alert-message">Connection lost. Waiting to reconnect...</span>
+      <button id="alert-close" type="button" aria-label="Close alert">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
     <main
       id="markdown-content"
       role="article"
@@ -29,9 +36,6 @@
     >
       <!-- MARKDOWN_OUTLET -->
     </main>
-
-    <template id="icon-alert-close"><!-- CLOSE_ICON_OUTLET --></template>
-    <template id="icon-copy"><!-- COPY_ICON_OUTLET --></template>
 
     <!-- SCRIPT_OUTLET -->
   </body>

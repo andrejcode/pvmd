@@ -5,39 +5,18 @@ import {
   type LiveUpdateMessage,
   type LiveUpdateOperation,
 } from '@/shared/live-update'
+import {
+  showDisconnectedAlert,
+  hideDisconnectedAlert,
+} from './disconnected-alert'
+import { renderIcons, createCopyIcon } from './icons'
 
 const markdownContent = document.getElementById('markdown-content')
 const watchEnabled = document.body.dataset['watch'] !== 'false'
-const closeAlertIconTemplate = document.getElementById(
-  'icon-alert-close',
-) as HTMLTemplateElement | null
-const copyIconTemplate = document.getElementById(
-  'icon-copy',
-) as HTMLTemplateElement | null
-let disconnectedAlert: HTMLDivElement | null = null
-
-type EnhancementRoot = ParentNode & {
-  querySelectorAll: ParentNode['querySelectorAll']
-}
-
-function showDisconnectedAlert() {
-  const alert = getDisconnectedAlert()
-  if (alert) {
-    alert.hidden = false
-  }
-}
-
-function hideDisconnectedAlert() {
-  if (disconnectedAlert) {
-    disconnectedAlert.hidden = true
-  }
-}
 
 const httpsOnly = document.body.hasAttribute('data-https-only')
 
-function addCopyButtons(root: EnhancementRoot) {
-  if (!copyIconTemplate) return
-
+function addCopyButtons(root: Element) {
   const codeBlocks = Array.from(root.querySelectorAll<HTMLElement>('pre code'))
   for (const code of codeBlocks) {
     const pre = code.parentElement
@@ -46,7 +25,8 @@ function addCopyButtons(root: EnhancementRoot) {
     const button = document.createElement('button')
     button.className = 'copy-button'
     button.ariaLabel = 'Copy code'
-    button.appendChild(copyIconTemplate.content.cloneNode(true))
+    button.appendChild(createCopyIcon())
+    renderIcons(button)
 
     button.addEventListener('click', () => {
       const text = code.textContent ?? ''
@@ -62,7 +42,7 @@ function addCopyButtons(root: EnhancementRoot) {
   }
 }
 
-function disableInteractiveContent(root: EnhancementRoot) {
+function disableInteractiveContent(root: HTMLElement) {
   const controls = root.querySelectorAll<HTMLElement>(
     'button, input, select, textarea',
   )
@@ -86,7 +66,7 @@ function disableInteractiveContent(root: EnhancementRoot) {
   }
 }
 
-function blockInsecureContent(root: EnhancementRoot) {
+function blockInsecureContent(root: HTMLElement) {
   if (!httpsOnly) return
 
   const links = root.querySelectorAll<HTMLAnchorElement>('a[href]')
@@ -109,7 +89,7 @@ function blockInsecureContent(root: EnhancementRoot) {
   }
 }
 
-function openExternalLinksInNewTab(root: EnhancementRoot) {
+function openExternalLinksInNewTab(root: HTMLElement) {
   const links = root.querySelectorAll<HTMLAnchorElement>('a[href]')
   for (const link of links) {
     const href = link.getAttribute('href') ?? ''
@@ -120,7 +100,7 @@ function openExternalLinksInNewTab(root: EnhancementRoot) {
   }
 }
 
-function applyEnhancements(root: EnhancementRoot) {
+function applyEnhancements(root: HTMLElement) {
   addCopyButtons(root)
   disableInteractiveContent(root)
   openExternalLinksInNewTab(root)
@@ -180,40 +160,6 @@ function createBlockElement(html: string): HTMLElement | null {
 
   const firstElement = template.content.firstElementChild
   return firstElement instanceof HTMLElement ? firstElement : null
-}
-
-function getDisconnectedAlert(): HTMLDivElement | null {
-  if (!watchEnabled) {
-    return null
-  }
-
-  if (disconnectedAlert) {
-    return disconnectedAlert
-  }
-
-  const alert = document.createElement('div')
-  alert.id = 'disconnected-alert'
-  alert.hidden = true
-
-  const message = document.createElement('span')
-  message.id = 'alert-message'
-  message.textContent = 'Connection lost. Waiting to reconnect...'
-
-  const closeButton = document.createElement('button')
-  closeButton.id = 'alert-close'
-  closeButton.ariaLabel = 'Close alert'
-  if (closeAlertIconTemplate) {
-    closeButton.appendChild(closeAlertIconTemplate.content.cloneNode(true))
-  }
-  closeButton.addEventListener('click', () => {
-    hideDisconnectedAlert()
-  })
-
-  alert.append(message, closeButton)
-  markdownContent?.before(alert)
-  disconnectedAlert = alert
-
-  return disconnectedAlert
 }
 
 function connectLiveUpdates() {

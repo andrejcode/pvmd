@@ -1,8 +1,12 @@
 describe('main', () => {
   const INITIAL_BODY_HTML = `
+      <div id="disconnected-alert" hidden>
+        <span id="alert-message">Connection lost. Waiting to reconnect...</span>
+        <button id="alert-close" type="button" aria-label="Close alert">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
       <main id="markdown-content" role="article" aria-live="polite" aria-atomic="false" aria-label="Markdown content"></main>
-      <template id="icon-alert-close"><svg data-testid="close-icon"></svg></template>
-      <template id="icon-copy"><svg data-testid="copy-icon"></svg></template>
     `
   let mockEventSource: {
     onopen: (() => void) | null
@@ -69,7 +73,7 @@ describe('main', () => {
       await loadMain()
 
       expect(globalThis.EventSource).not.toHaveBeenCalled()
-      expect(document.getElementById('disconnected-alert')).toBeNull()
+      expect(document.getElementById('disconnected-alert')?.hidden).toBe(true)
     })
   })
 
@@ -161,13 +165,13 @@ describe('main', () => {
       expect(document.querySelectorAll('.copy-button')).toHaveLength(0)
     })
 
-    test('should clone the icon template into each button', async () => {
+    test('should add a copy icon to each button', async () => {
       await loadMain()
 
       sendMarkdown('<pre><code>hello</code></pre>')
 
       const button = document.querySelector('.copy-button')
-      const svg = button?.querySelector('svg')
+      const svg = button?.querySelector('svg[data-lucide="copy"]')
       expect(svg).toBeTruthy()
     })
 
@@ -325,16 +329,19 @@ describe('main', () => {
   })
 
   describe('disconnected alert', () => {
-    test('should not exist initially', async () => {
+    test('should be hidden initially', async () => {
       await loadMain()
 
-      expect(document.getElementById('disconnected-alert')).toBeNull()
+      const alert = document.getElementById('disconnected-alert')
+      expect(alert).toBeTruthy()
+      expect(alert?.hidden).toBe(true)
+      expect(alert?.querySelector('svg[data-lucide="x"]')).toBeTruthy()
     })
 
     test('should appear when connection is lost (onerror)', async () => {
       await loadMain()
 
-      expect(document.getElementById('disconnected-alert')).toBeNull()
+      expect(document.getElementById('disconnected-alert')?.hidden).toBe(true)
 
       if (mockEventSource.onerror) {
         mockEventSource.onerror()
@@ -343,7 +350,7 @@ describe('main', () => {
       const alert = document.getElementById('disconnected-alert')
       expect(alert).toBeTruthy()
       expect(alert?.hidden).toBe(false)
-      expect(alert?.querySelector('svg[data-testid="close-icon"]')).toBeTruthy()
+      expect(alert?.querySelector('svg[data-lucide="x"]')).toBeTruthy()
     })
 
     test('should disappear when client reconnects (onopen)', async () => {
