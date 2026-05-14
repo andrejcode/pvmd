@@ -384,5 +384,45 @@ describe('main', () => {
 
       expect(alert?.hidden).toBe(true)
     })
+
+    test('should keep dismissed alert hidden during reconnect errors', async () => {
+      await loadMain()
+
+      if (mockEventSource.onerror) {
+        mockEventSource.onerror()
+      }
+
+      const alert = document.getElementById('disconnected-alert')
+      const closeButton = document.getElementById('alert-close')
+      expect(alert?.hidden).toBe(false)
+
+      closeButton?.click()
+      if (mockEventSource.onerror) {
+        mockEventSource.onerror()
+      }
+
+      expect(alert?.hidden).toBe(true)
+    })
+
+    test('should show alert again after reconnect resets dismissal', async () => {
+      await loadMain()
+
+      if (mockEventSource.onerror) {
+        mockEventSource.onerror()
+      }
+
+      const alert = document.getElementById('disconnected-alert')
+      document.getElementById('alert-close')?.click()
+      expect(alert?.hidden).toBe(true)
+
+      if (mockEventSource.onopen) {
+        mockEventSource.onopen()
+      }
+      if (mockEventSource.onerror) {
+        mockEventSource.onerror()
+      }
+
+      expect(alert?.hidden).toBe(false)
+    })
   })
 })

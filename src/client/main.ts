@@ -7,7 +7,7 @@ import {
 } from '@/shared/live-update'
 import {
   showDisconnectedAlert,
-  hideDisconnectedAlert,
+  resetDisconnectedAlert,
 } from './disconnected-alert'
 import { renderIcons, createCopyIcon } from './icons'
 
@@ -170,7 +170,7 @@ function connectLiveUpdates() {
   const eventSource = new EventSource('/events')
 
   eventSource.onopen = () => {
-    hideDisconnectedAlert()
+    resetDisconnectedAlert()
   }
 
   eventSource.onerror = () => {

@@ -46,4 +46,19 @@ describe('disconnected alert', () => {
 
     expect(alert?.hidden).toBe(true)
   })
+
+  test('does not show dismissed alert until it is reset', async () => {
+    const { showDisconnectedAlert, resetDisconnectedAlert } =
+      await loadDisconnectedAlert()
+    const alert = document.getElementById('disconnected-alert')
+
+    showDisconnectedAlert()
+    document.getElementById('alert-close')?.click()
+    showDisconnectedAlert()
+    expect(alert?.hidden).toBe(true)
+
+    resetDisconnectedAlert()
+    showDisconnectedAlert()
+    expect(alert?.hidden).toBe(false)
+  })
 })
