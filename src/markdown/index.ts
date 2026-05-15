@@ -83,7 +83,10 @@ marked.use(
 
 type MarkdownToken = ReturnType<typeof marked.lexer>[number]
 
-export function renderMarkdownBlocks(content: string): LiveUpdateBlock[] {
+export function renderMarkdownBlocks(
+  content: string,
+  httpsOnly = false,
+): LiveUpdateBlock[] {
   const normalizedContent = preprocessMarkdownContent(
     normalizeMarkdownContent(content),
   )
@@ -95,7 +98,7 @@ export function renderMarkdownBlocks(content: string): LiveUpdateBlock[] {
   const blocks: LiveUpdateBlock[] = []
 
   for (const token of tokens) {
-    const html = renderTokenHtml(token)
+    const html = renderTokenHtml(token, httpsOnly)
     if (!html.trim()) {
       continue
     }
@@ -159,13 +162,21 @@ function walkMarkdownTokens(tokens: MarkdownToken[]): MarkdownToken[] {
   return tokens
 }
 
-function renderTokenHtml(token: MarkdownToken): string {
-  const key = JSON.stringify(token)
+function renderTokenHtml(token: MarkdownToken, httpsOnly: boolean): string {
+  const key = getRenderCacheKey(token, httpsOnly)
   const cached = blockHtmlCache.get(key)
   if (cached !== undefined) return cached
-  const result = sanitizeHTML(marked.parser([structuredClone(token)]))
+  const result = sanitizeHTML(
+    marked.parser([structuredClone(token)]),
+    httpsOnly,
+  )
   blockHtmlCache.set(key, result)
   return result
+}
+
+function getRenderCacheKey(token: MarkdownToken, httpsOnly: boolean): string {
+  const mode = httpsOnly ? 'https-only' : 'default'
+  return `${mode}\x00${JSON.stringify(token)}`
 }
 
 function highlightCode(code: string, lang: string): string {

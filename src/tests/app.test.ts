@@ -58,6 +58,7 @@ describe('run', () => {
 
   test('passes the configured theme to prepareHTML', () => {
     config.theme = 'dark-colorblind'
+    config.httpsOnly = true
 
     vi.mocked(validateMarkdownPath).mockReturnValue(undefined)
     vi.mocked(createWatcher).mockReturnValue({
@@ -74,6 +75,8 @@ describe('run', () => {
 
     run('README.md')
 
+    expect(createWatcher).toHaveBeenCalledWith('/tmp/readme.md', true)
+    expect(renderMarkdownBlocks).toHaveBeenCalledWith('# Hello', true)
     expect(prepareHTML).toHaveBeenCalledWith(
       '/tmp/readme.md',
       '<h1>Hello</h1>',

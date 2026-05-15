@@ -12,9 +12,8 @@ import {
 import { renderIcons, createCopyIcon } from './icons'
 
 const markdownContent = document.getElementById('markdown-content')
-const watchEnabled = document.body.dataset['watch'] !== 'false'
 
-const httpsOnly = document.body.hasAttribute('data-https-only')
+const watchEnabled = document.body.dataset['watch'] !== 'false'
 
 function addCopyButtons(root: Element) {
   const codeBlocks = Array.from(root.querySelectorAll<HTMLElement>('pre code'))
@@ -66,29 +65,6 @@ function disableInteractiveContent(root: HTMLElement) {
   }
 }
 
-function blockInsecureContent(root: HTMLElement) {
-  if (!httpsOnly) return
-
-  const links = root.querySelectorAll<HTMLAnchorElement>('a[href]')
-  for (const link of links) {
-    const href = link.getAttribute('href') ?? ''
-    if (href.startsWith('http://')) {
-      link.removeAttribute('href')
-      link.setAttribute('role', 'link')
-      link.setAttribute('aria-disabled', 'true')
-      link.title = 'Blocked: HTTP links are not allowed in HTTPS-only mode'
-    }
-  }
-
-  const images = root.querySelectorAll<HTMLImageElement>('img[src]')
-  for (const img of images) {
-    const src = img.getAttribute('src') ?? ''
-    if (src.startsWith('http://')) {
-      img.remove()
-    }
-  }
-}
-
 function openExternalLinksInNewTab(root: HTMLElement) {
   const links = root.querySelectorAll<HTMLAnchorElement>('a[href]')
   for (const link of links) {
@@ -104,7 +80,6 @@ function applyEnhancements(root: HTMLElement) {
   addCopyButtons(root)
   disableInteractiveContent(root)
   openExternalLinksInNewTab(root)
-  blockInsecureContent(root)
 }
 
 function applyFullHtml(html: string) {

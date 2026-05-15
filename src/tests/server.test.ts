@@ -164,35 +164,12 @@ describe('createServer', () => {
     }
   })
 
-  test('GET / with httpsOnly injects data-https-only on body', async () => {
-    config.httpsOnly = true
-
-    try {
-      await withTestServer(async (request) => {
-        const res = await request(ROOT_PATH)
-        const body = await res.text()
-        expect(body).toContain('data-https-only')
-      })
-    } finally {
-      config.httpsOnly = false
-    }
-  })
-
   test('GET / without httpsOnly allows all img-src in CSP', async () => {
     config.httpsOnly = false
     await withTestServer(async (request) => {
       const res = await request(ROOT_PATH)
       const csp = res.headers.get('content-security-policy')
       expect(csp).toContain('img-src * data:')
-    })
-  })
-
-  test('GET / without httpsOnly does not inject data-https-only', async () => {
-    config.httpsOnly = false
-    await withTestServer(async (request) => {
-      const res = await request(ROOT_PATH)
-      const body = await res.text()
-      expect(body).not.toContain('data-https-only')
     })
   })
 

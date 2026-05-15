@@ -236,26 +236,8 @@ describe('main', () => {
     })
   })
 
-  describe('https-only mode', () => {
-    test('should block http:// links when data-https-only is set', async () => {
-      document.body.setAttribute('data-https-only', '')
-      await loadMain()
-
-      sendMarkdown(
-        '<a href="http://example.com">HTTP Link</a><a href="https://example.com">HTTPS Link</a>',
-      )
-
-      const links = document.querySelectorAll('a')
-      const httpLink = links[0]!
-      const httpsLink = links[1]!
-
-      expect(httpLink.hasAttribute('href')).toBe(false)
-      expect(httpLink.getAttribute('aria-disabled')).toBe('true')
-      expect(httpsLink.getAttribute('href')).toBe('https://example.com')
-    })
-
+  describe('external links', () => {
     test('should add target=_blank and rel=noopener noreferrer to all external links', async () => {
-      document.body.setAttribute('data-https-only', '')
       await loadMain()
 
       sendMarkdown(
@@ -273,7 +255,6 @@ describe('main', () => {
     })
 
     test('should not add target=_blank to relative links', async () => {
-      document.body.setAttribute('data-https-only', '')
       await loadMain()
 
       sendMarkdown(
@@ -283,47 +264,6 @@ describe('main', () => {
       const links = document.querySelectorAll('a')
       for (const link of links) {
         expect(link.hasAttribute('target')).toBe(false)
-      }
-    })
-
-    test('should remove http:// images', async () => {
-      document.body.setAttribute('data-https-only', '')
-      await loadMain()
-
-      sendMarkdown(
-        '<img src="http://example.com/img.png"><img src="https://example.com/img.png">',
-      )
-
-      const images = document.querySelectorAll('img')
-      expect(images).toHaveLength(1)
-      expect(images[0]!.getAttribute('src')).toBe('https://example.com/img.png')
-    })
-
-    test('should not block http links when data-https-only is not set', async () => {
-      document.body.removeAttribute('data-https-only')
-      await loadMain()
-
-      sendMarkdown(
-        '<a href="http://example.com">HTTP</a><a href="https://example.com">HTTPS</a>',
-      )
-
-      const links = document.querySelectorAll('a')
-      expect(links[0]!.getAttribute('href')).toBe('http://example.com')
-      expect(links[1]!.getAttribute('href')).toBe('https://example.com')
-    })
-
-    test('should still secure external links when data-https-only is not set', async () => {
-      document.body.removeAttribute('data-https-only')
-      await loadMain()
-
-      sendMarkdown(
-        '<a href="http://example.com">HTTP</a><a href="https://example.com">HTTPS</a>',
-      )
-
-      const links = document.querySelectorAll('a')
-      for (const link of links) {
-        expect(link.getAttribute('target')).toBe('_blank')
-        expect(link.getAttribute('rel')).toBe('noopener noreferrer')
       }
     })
   })

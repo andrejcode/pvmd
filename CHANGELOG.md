@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 - Stopped invalid `~/.pvmd/config.json` files and invalid local config entries from aborting startup. `pvmd` now warns and ignores malformed JSON, unknown settings, and invalid setting values while continuing with built-in defaults or any remaining valid config values.
 - Restored GitHub-style preview padding so documents start with comfortable spacing while first headings no longer add extra top margin.
 - Kept dismissed disconnected alerts hidden across connection retry errors until the client reconnects.
+- Enforced HTTPS-only URL filtering during server-side markdown rendering and removed the duplicate browser-side policy checks.
 
 ## 0.2.4 - 2026-04-05
 

@@ -32,11 +32,12 @@ export function run(userPath: string) {
   const fullPath = resolvePath(userPath)
   validateMarkdownPath(fullPath)
 
-  const watcher = config.watch ? createWatcher(fullPath) : null
+  const httpsOnly = config.httpsOnly
+  const watcher = config.watch ? createWatcher(fullPath, httpsOnly) : null
 
   const getHTML = () => {
     const markdownContent = readMarkdownFile(fullPath)
-    const blocks = renderMarkdownBlocks(markdownContent)
+    const blocks = renderMarkdownBlocks(markdownContent, httpsOnly)
     return prepareHTML(fullPath, renderBlocksHtml(blocks), config.theme)
   }
 

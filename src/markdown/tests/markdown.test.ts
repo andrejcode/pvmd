@@ -15,8 +15,8 @@ import {
   renderMarkdownBlocks,
 } from '../index'
 
-function renderMarkdown(markdown: string): string {
-  return renderMarkdownBlocks(markdown)
+function renderMarkdown(markdown: string, httpsOnly?: boolean): string {
+  return renderMarkdownBlocks(markdown, httpsOnly)
     .map((block) => block.html)
     .join('')
 }
@@ -177,6 +177,54 @@ describe('renderMarkdownBlocks', () => {
       const result = renderMarkdown(
         '<img src="data:image/png;base64,AAAA" alt="Inline">',
       )
+      expect(result).toContain('src="data:image/png;base64,AAAA"')
+    })
+
+    test('should keep http links and images by default', () => {
+      const result = renderMarkdown(
+        '[HTTP](http://example.com) ![Alt](http://example.com/image.png)',
+      )
+
+      expect(result).toContain('<a href="http://example.com">HTTP</a>')
+      expect(result).toContain(
+        '<img src="http://example.com/image.png" alt="Alt">',
+      )
+    })
+
+    test('should strip http links and images in https-only mode', () => {
+      const result = renderMarkdown(
+        '[HTTP](http://example.com) ![Alt](http://example.com/image.png)',
+        true,
+      )
+
+      expect(result).toContain('<a>HTTP</a>')
+      expect(result).not.toContain('href="http://example.com"')
+      expect(result).not.toContain('<img')
+      expect(result).not.toContain('http://example.com/image.png')
+    })
+
+    test('should strip protocol-relative URLs in https-only mode', () => {
+      const result = renderMarkdown(
+        '[CDN](//example.com) <img src="//example.com/image.png">',
+        true,
+      )
+
+      expect(result).toContain('<a>CDN</a>')
+      expect(result).not.toContain('href="//example.com"')
+      expect(result).not.toContain('<img')
+      expect(result).not.toContain('//example.com/image.png')
+    })
+
+    test('should preserve safe URL forms in https-only mode', () => {
+      const result = renderMarkdown(
+        '[HTTPS](https://example.com) [Relative](./page.md) [Mail](mailto:test@example.com) [Phone](tel:+123) <img src="data:image/png;base64,AAAA" alt="Inline">',
+        true,
+      )
+
+      expect(result).toContain('<a href="https://example.com">HTTPS</a>')
+      expect(result).toContain('<a href="./page.md">Relative</a>')
+      expect(result).toContain('<a href="mailto:test@example.com">Mail</a>')
+      expect(result).toContain('<a href="tel:+123">Phone</a>')
       expect(result).toContain('src="data:image/png;base64,AAAA"')
     })
   })
@@ -451,6 +499,18 @@ const example = 'code block';
       const result = renderMarkdown('- [x] done\n- [ ] todo')
       expect(result).toContain('type="checkbox"')
       expect(result).toContain('disabled')
+    })
+
+    test('should apply https-only mode to raw HTML URLs', () => {
+      const result = renderMarkdown(
+        '<a href="http://example.com">raw link</a><img src="http://example.com/image.png" alt="raw image">',
+        true,
+      )
+
+      expect(result).toContain('<a>raw link</a>')
+      expect(result).not.toContain('href="http://example.com"')
+      expect(result).not.toContain('<img')
+      expect(result).not.toContain('http://example.com/image.png')
     })
   })
 

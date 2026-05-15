@@ -122,10 +122,25 @@ describe('createWatcher', () => {
     expect(readMarkdownFileMock).toHaveBeenCalledTimes(1)
     expect(readMarkdownFileMock).toHaveBeenCalledWith('/tmp/file.md')
     expect(renderMarkdownBlocksMock).toHaveBeenCalledTimes(1)
-    expect(renderMarkdownBlocksMock).toHaveBeenCalledWith('# Hello')
+    expect(renderMarkdownBlocksMock).toHaveBeenCalledWith('# Hello', false)
     expect(client.write).toHaveBeenCalledWith(
       'data: {"kind":"full","html":"<div data-pvmd-block-id=\\"block-1\\"><h1>Hello</h1></div>"}\n\n',
     )
+  })
+
+  test('passes https-only mode to markdown renderer', () => {
+    const watcher = createWatcher('/tmp/file.md', true)
+    const client = createMockClient()
+
+    watcher.handleSSE(
+      {} as IncomingMessage,
+      client as unknown as ServerResponse,
+    )
+
+    watchCallback('change')
+    vi.advanceTimersByTime(WATCH_DEBOUNCE_MS)
+
+    expect(renderMarkdownBlocksMock).toHaveBeenCalledWith('# Hello', true)
   })
 
   test('sends patch operations after the first rendered document', () => {

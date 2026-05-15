@@ -27,13 +27,13 @@ type ElementNode =
   | DefaultTreeAdapterTypes.Element
   | DefaultTreeAdapterTypes.Template
 
-export function sanitizeHTML(html: string): string {
+export function sanitizeHTML(html: string, httpsOnly = false): string {
   const fragment = parseFragment(html)
-  sanitizeParent(fragment)
+  sanitizeParent(fragment, httpsOnly)
   return serialize(fragment)
 }
 
-function sanitizeParent(parent: ParentNode): void {
+function sanitizeParent(parent: ParentNode, httpsOnly: boolean): void {
   for (const child of [...parent.childNodes]) {
     if (!isElementNode(child)) {
       continue
@@ -49,12 +49,17 @@ function sanitizeParent(parent: ParentNode): void {
       continue
     }
 
-    sanitizeAttributes(child)
-    sanitizeParent(child)
+    if (shouldRemoveElementForUrlPolicy(child, httpsOnly)) {
+      removeChild(parent, child)
+      continue
+    }
+
+    sanitizeAttributes(child, httpsOnly)
+    sanitizeParent(child, httpsOnly)
   }
 }
 
-function sanitizeAttributes(element: ElementNode): void {
+function sanitizeAttributes(element: ElementNode, httpsOnly: boolean): void {
   element.attrs = element.attrs.filter((attr) => {
     const name = attr.name.toLowerCase()
 
@@ -66,7 +71,7 @@ function sanitizeAttributes(element: ElementNode): void {
       return true
     }
 
-    return isSafeUrl(attr.value, name, element.tagName)
+    return isSafeUrl(attr.value, name, element.tagName, httpsOnly)
   })
 }
 
@@ -74,10 +79,15 @@ function isSafeUrl(
   value: string,
   attributeName: string,
   tagName: string,
+  httpsOnly: boolean,
 ): boolean {
   const trimmed = value.trim()
 
   if (!trimmed) {
+    return false
+  }
+
+  if (httpsOnly && isHttpsOnlyBlockedUrl(trimmed)) {
     return false
   }
 
@@ -111,6 +121,32 @@ function isSafeUrl(
   } catch {
     return false
   }
+}
+
+function shouldRemoveElementForUrlPolicy(
+  element: ElementNode,
+  httpsOnly: boolean,
+): boolean {
+  if (!httpsOnly || element.tagName !== 'img') {
+    return false
+  }
+
+  const src = getAttributeValue(element, 'src')
+  return src !== undefined && isHttpsOnlyBlockedUrl(src)
+}
+
+function isHttpsOnlyBlockedUrl(value: string): boolean {
+  const normalized = stripControlAndSpace(value.trim()).toLowerCase()
+
+  if (normalized.startsWith('//')) {
+    return true
+  }
+
+  if (!SCHEME_PREFIX.test(normalized)) {
+    return false
+  }
+
+  return normalized.startsWith('http:')
 }
 
 function isElementNode(

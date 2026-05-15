@@ -63,10 +63,6 @@ function buildCSPHeader(nonce: string): string {
 function applyBodyDataAttributes(html: string): string {
   const attributes: string[] = []
 
-  if (config.httpsOnly) {
-    attributes.push('data-https-only')
-  }
-
   if (!config.watch) {
     attributes.push('data-watch="false"')
   }

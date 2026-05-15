@@ -9,7 +9,7 @@ import type { LiveUpdateBlock } from '@/shared/live-update'
 import { exitWithError } from '@/utils/fatal-error'
 import { createLiveUpdateMessage } from './patch-diff'
 
-export default function createWatcher(path: string) {
+export default function createWatcher(path: string, httpsOnly = false) {
   const debounceMs = 200
   const renameRetryDelayMs = 50
   const renameRetryLimit = 10
@@ -68,7 +68,7 @@ export default function createWatcher(path: string) {
 
     try {
       const content = readMarkdownFile(path)
-      const nextBlocks = renderMarkdownBlocks(content)
+      const nextBlocks = renderMarkdownBlocks(content, httpsOnly)
       const message = createLiveUpdateMessage(previousBlocks, nextBlocks)
 
       previousBlocks = nextBlocks
