@@ -495,6 +495,29 @@ const example = 'code block';
       )
     })
 
+    test('should preserve markdown content inside details disclosures', () => {
+      const markdown = [
+        '<details>',
+        '<summary>Click to expand: Architecture Diagram</summary>',
+        '',
+        '```',
+        'diagram',
+        '```',
+        '',
+        '</details>',
+      ].join('\n')
+      const blocks = renderMarkdownBlocks(markdown)
+      const result = blocks.map((block) => block.html).join('')
+      const detailsStart = result.indexOf('<details>')
+      const codeBlockStart = result.indexOf('<pre><code>diagram\n</code></pre>')
+      const detailsEnd = result.indexOf('</details>')
+
+      expect(blocks).toHaveLength(1)
+      expect(detailsStart).toBeGreaterThanOrEqual(0)
+      expect(codeBlockStart).toBeGreaterThan(detailsStart)
+      expect(codeBlockStart).toBeLessThan(detailsEnd)
+    })
+
     test('should preserve markdown task list checkboxes', () => {
       const result = renderMarkdown('- [x] done\n- [ ] todo')
       expect(result).toContain('type="checkbox"')

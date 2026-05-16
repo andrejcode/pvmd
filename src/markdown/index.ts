@@ -82,6 +82,7 @@ marked.use(
 )
 
 type MarkdownToken = ReturnType<typeof marked.lexer>[number]
+type MarkdownTokenGroup = MarkdownToken[]
 
 export function renderMarkdownBlocks(
   content: string,
@@ -90,24 +91,24 @@ export function renderMarkdownBlocks(
   const normalizedContent = preprocessMarkdownContent(
     normalizeMarkdownContent(content),
   )
-  const tokens = walkMarkdownTokens(
-    processMarkdownTokens(marked.lexer(normalizedContent)),
+  const tokenGroups = groupDisclosureTokens(
+    walkMarkdownTokens(processMarkdownTokens(marked.lexer(normalizedContent))),
   )
   const blockOccurrences = new Map<string, number>()
 
   const blocks: LiveUpdateBlock[] = []
 
-  for (const token of tokens) {
-    const html = renderTokenHtml(token, httpsOnly)
+  for (const tokenGroup of tokenGroups) {
+    const html = renderTokensHtml(tokenGroup, httpsOnly)
     if (!html.trim()) {
       continue
     }
 
-    const key = getBlockKey(token, html)
+    const key = getBlockKey(tokenGroup, html)
     const occurrence = (blockOccurrences.get(key) ?? 0) + 1
     blockOccurrences.set(key, occurrence)
 
-    const id = createBlockId(token.type, key, occurrence)
+    const id = createBlockId(getBlockType(tokenGroup), key, occurrence)
 
     blocks.push({
       id,
@@ -162,21 +163,91 @@ function walkMarkdownTokens(tokens: MarkdownToken[]): MarkdownToken[] {
   return tokens
 }
 
-function renderTokenHtml(token: MarkdownToken, httpsOnly: boolean): string {
-  const key = getRenderCacheKey(token, httpsOnly)
+function groupDisclosureTokens(tokens: MarkdownToken[]): MarkdownTokenGroup[] {
+  const groups: MarkdownTokenGroup[] = []
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index]!
+
+    if (!opensDetailsElement(token)) {
+      groups.push([token])
+      continue
+    }
+
+    const group: MarkdownTokenGroup = []
+    let depth = 0
+    let matchedClose = false
+
+    for (let groupIndex = index; groupIndex < tokens.length; groupIndex += 1) {
+      const groupToken = tokens[groupIndex]!
+      group.push(groupToken)
+      depth += getDetailsDepthDelta(groupToken)
+
+      if (depth <= 0) {
+        matchedClose = true
+        index = groupIndex
+        break
+      }
+    }
+
+    if (matchedClose) {
+      groups.push(group)
+      continue
+    }
+
+    groups.push([token])
+  }
+
+  return groups
+}
+
+function opensDetailsElement(token: MarkdownToken): boolean {
+  return getDetailsDepthDelta(token) > 0
+}
+
+function getDetailsDepthDelta(token: MarkdownToken): number {
+  const html = getTokenHtml(token)
+  if (!html) return 0
+
+  let depth = 0
+  const tagPattern = /<\/?\s*details(?:\s[^>]*)?>/gi
+
+  for (const match of html.matchAll(tagPattern)) {
+    depth += match[0].startsWith('</') ? -1 : 1
+  }
+
+  return depth
+}
+
+function getTokenHtml(token: MarkdownToken): string {
+  return token.type === 'html' &&
+    'text' in token &&
+    typeof token.text === 'string'
+    ? token.text
+    : ''
+}
+
+function renderTokensHtml(
+  tokenGroup: MarkdownTokenGroup,
+  httpsOnly: boolean,
+): string {
+  const key = getRenderCacheKey(tokenGroup, httpsOnly)
   const cached = blockHtmlCache.get(key)
   if (cached !== undefined) return cached
   const result = sanitizeHTML(
-    marked.parser([structuredClone(token)]),
+    marked.parser(structuredClone(tokenGroup)),
     httpsOnly,
   )
   blockHtmlCache.set(key, result)
   return result
 }
 
-function getRenderCacheKey(token: MarkdownToken, httpsOnly: boolean): string {
+function getRenderCacheKey(
+  tokenGroup: MarkdownTokenGroup,
+  httpsOnly: boolean,
+): string {
   const mode = httpsOnly ? 'https-only' : 'default'
-  return `${mode}\x00${JSON.stringify(token)}`
+  return `${mode}\x00${JSON.stringify(tokenGroup)}`
 }
 
 function highlightCode(code: string, lang: string): string {
@@ -189,10 +260,18 @@ function highlightCode(code: string, lang: string): string {
   return result
 }
 
-function getBlockKey(token: MarkdownToken, html: string): string {
-  const raw = 'raw' in token && typeof token.raw === 'string' ? token.raw : ''
+function getBlockKey(tokenGroup: MarkdownTokenGroup, html: string): string {
+  const raw = tokenGroup.map((token) => getTokenRaw(token)).join('')
   const content = html || raw
-  return `${token.type}:${content}`
+  return `${getBlockType(tokenGroup)}:${content}`
+}
+
+function getTokenRaw(token: MarkdownToken): string {
+  return 'raw' in token && typeof token.raw === 'string' ? token.raw : ''
+}
+
+function getBlockType(tokenGroup: MarkdownTokenGroup): string {
+  return tokenGroup.length === 1 ? tokenGroup[0]!.type : 'html'
 }
 
 function createBlockId(type: string, key: string, occurrence: number): string {
