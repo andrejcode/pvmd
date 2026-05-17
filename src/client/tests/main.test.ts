@@ -110,6 +110,65 @@ describe('main', () => {
       ).toContain('After')
     })
 
+    test('should preserve expanded details state across full content updates', async () => {
+      await loadMain()
+
+      sendMarkdown(
+        '<div data-pvmd-block-id="block-1"><details><summary>Old title</summary><p>Before</p></details></div>',
+      )
+      document.querySelector<HTMLDetailsElement>('details')!.open = true
+
+      sendMarkdown(
+        '<div data-pvmd-block-id="block-2"><details><summary>New title</summary><p>After</p></details></div>',
+      )
+
+      const details = document.querySelector<HTMLDetailsElement>('details')
+      expect(details?.open).toBe(true)
+      expect(details?.textContent).toContain('After')
+    })
+
+    test('should preserve expanded details state across patch replacements', async () => {
+      await loadMain()
+
+      sendMarkdown(
+        '<div data-pvmd-block-id="block-1"><details><summary>Title</summary><p>Before</p></details></div>',
+      )
+      document.querySelector<HTMLDetailsElement>('details')!.open = true
+
+      sendPatch([
+        { type: 'remove', blockId: 'block-1' },
+        {
+          type: 'insert',
+          html: '<div data-pvmd-block-id="block-2"><details><summary>Title</summary><p>After</p></details></div>',
+        },
+      ])
+
+      const details = document.querySelector<HTMLDetailsElement>('details')
+      expect(details?.open).toBe(true)
+      expect(details?.textContent).toContain('After')
+    })
+
+    test('should preserve collapsed details state across updates', async () => {
+      await loadMain()
+
+      sendMarkdown(
+        '<div data-pvmd-block-id="block-1"><details open><summary>Title</summary><p>Before</p></details></div>',
+      )
+      document.querySelector<HTMLDetailsElement>('details')!.open = false
+
+      sendPatch([
+        { type: 'remove', blockId: 'block-1' },
+        {
+          type: 'insert',
+          html: '<div data-pvmd-block-id="block-2"><details open><summary>Title</summary><p>After</p></details></div>',
+        },
+      ])
+
+      const details = document.querySelector<HTMLDetailsElement>('details')
+      expect(details?.open).toBe(false)
+      expect(details?.textContent).toContain('After')
+    })
+
     test('should disable rendered interactive controls', async () => {
       await loadMain()
 

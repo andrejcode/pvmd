@@ -5,6 +5,7 @@ import {
   type LiveUpdateMessage,
   type LiveUpdateOperation,
 } from '@/shared/live-update'
+import { captureDetailsStates, restoreDetailsStates } from './details-state'
 import {
   showDisconnectedAlert,
   resetDisconnectedAlert,
@@ -87,14 +88,18 @@ function applyFullHtml(html: string) {
     return
   }
 
+  const detailsStates = captureDetailsStates(markdownContent)
   markdownContent.innerHTML = html
   applyEnhancements(markdownContent)
+  restoreDetailsStates(markdownContent, detailsStates)
 }
 
 function applyPatch(ops: LiveUpdateOperation[]) {
   if (!markdownContent) {
     return
   }
+
+  const detailsStates = captureDetailsStates(markdownContent)
 
   // Apply each operation directly against the existing block wrappers so
   // untouched markdown sections stay mounted in the DOM.
@@ -127,6 +132,8 @@ function applyPatch(ops: LiveUpdateOperation[]) {
 
     applyEnhancements(block)
   }
+
+  restoreDetailsStates(markdownContent, detailsStates)
 }
 
 function createBlockElement(html: string): HTMLElement | null {

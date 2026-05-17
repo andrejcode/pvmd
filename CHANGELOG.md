@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - Kept dismissed disconnected alerts hidden across connection retry errors until the client reconnects.
 - Enforced HTTPS-only URL filtering during server-side markdown rendering and removed the duplicate browser-side policy checks.
 - Kept Markdown content inside `<details>` disclosures so GitHub-style expand/collapse sections render and toggle correctly.
+- Preserved manually expanded or collapsed `<details>` disclosures across live preview updates.
 
 ## 0.2.4 - 2026-04-05
 
