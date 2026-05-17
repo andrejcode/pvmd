@@ -13,6 +13,94 @@ describe('main', () => {
     onerror: (() => void) | null
     onmessage: ((event: MessageEvent) => void) | null
   }
+
+  async function loadMain() {
+    await import('../main')
+  }
+
+  function sendMessage(data: unknown) {
+    mockEventSource.onmessage?.(new MessageEvent('message', { data }))
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = INITIAL_BODY_HTML
+    document.body.removeAttribute('data-watch')
+
+    mockEventSource = {
+      onopen: null,
+      onerror: null,
+      onmessage: null,
+    }
+    ;(globalThis as Record<string, unknown>)['EventSource'] = vi.fn(
+      function () {
+        return mockEventSource
+      },
+    )
+
+    vi.resetModules()
+  })
+
+  test('creates EventSource when watch mode is enabled', async () => {
+    await loadMain()
+
+    expect(globalThis.EventSource).toHaveBeenCalledWith('/events')
+  })
+
+  test('does not create EventSource when watch mode is disabled', async () => {
+    document.body.setAttribute('data-watch', 'false')
+
+    await loadMain()
+
+    expect(globalThis.EventSource).not.toHaveBeenCalled()
+    expect(document.getElementById('disconnected-alert')?.hidden).toBe(true)
+  })
+
+  test('applies initial content enhancements on bootstrap', async () => {
+    const markdownContent = document.getElementById('markdown-content')
+    markdownContent!.innerHTML =
+      '<pre><code>const a = 1</code></pre><a href="https://example.com">External</a>'
+
+    await loadMain()
+
+    expect(document.querySelectorAll('.copy-button')).toHaveLength(1)
+    expect(document.querySelector('a')?.getAttribute('target')).toBe('_blank')
+  })
+
+  test('wires live messages to markdown content updates', async () => {
+    await loadMain()
+    const markdownContent = document.getElementById('markdown-content')
+
+    sendMessage(JSON.stringify('<h1>Test Content</h1>'))
+
+    expect(markdownContent?.innerHTML).toBe('<h1>Test Content</h1>')
+  })
+
+  test('keeps disconnected alert handling wired through live updates', async () => {
+    await loadMain()
+    const alert = document.getElementById('disconnected-alert')
+
+    mockEventSource.onerror?.()
+    expect(alert?.hidden).toBe(false)
+
+    mockEventSource.onopen?.()
+    expect(alert?.hidden).toBe(true)
+  })
+})
+describe('main', () => {
+  const INITIAL_BODY_HTML = `
+      <div id="disconnected-alert" hidden>
+        <span id="alert-message">Connection lost. Waiting to reconnect...</span>
+        <button id="alert-close" type="button" aria-label="Close alert">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <main id="markdown-content" role="article" aria-live="polite" aria-atomic="false" aria-label="Markdown content"></main>
+    `
+  let mockEventSource: {
+    onopen: (() => void) | null
+    onerror: (() => void) | null
+    onmessage: ((event: MessageEvent) => void) | null
+  }
   let mockWriteText: ReturnType<typeof vi.fn<() => Promise<void>>>
 
   async function loadMain() {
