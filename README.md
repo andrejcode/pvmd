@@ -106,7 +106,7 @@ Use a local config file for project defaults:
 
 `pvmd` prints a local preview address such as `http://127.0.0.1:8765/` when it starts. If browser auto-open is unavailable or disabled, open that address manually.
 
-For very large Markdown files with many lines, the first preview load can take longer and memory usage will increase because more content has to be processed and kept in sync. This is a current limitation and is planned for future optimization.
+For Markdown files larger than the built-in default max size of 512 KB, `pvmd` automatically disables file watching for that preview. You can still preview larger files with `--no-size-check` or by raising `--max-size`, but live updates are skipped to avoid expensive reprocessing while editing. The first browser render can also take longer for large documents, especially in Safari, because the browser still has to lay out the full rendered document.
 
 ## CLI Options
 

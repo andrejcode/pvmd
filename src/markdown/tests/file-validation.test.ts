@@ -1,6 +1,10 @@
 import fs from 'node:fs'
 import { config } from '@/cli/config'
-import { validateMarkdownExtension, validateFile } from '../file-validation'
+import {
+  isLargerThanDefaultMaxFileSize,
+  validateMarkdownExtension,
+  validateFile,
+} from '../file-validation'
 
 vi.mock('node:fs')
 
@@ -226,5 +230,41 @@ describe('validateFile', () => {
       size: 0,
     })
     expect(() => validateFile('test.md')).not.toThrow()
+  })
+
+  test('detects files larger than the default max size independently of validation config', () => {
+    config.skipSizeCheck = true
+    config.maxFileSize = 2048
+    mockStats({
+      isDirectory: false,
+      isFile: true,
+      isSymbolicLink: false,
+      size: 600 * 1024,
+    })
+
+    expect(isLargerThanDefaultMaxFileSize('test.md')).toBe(true)
+    expect(() => validateFile('test.md')).not.toThrow()
+  })
+
+  test('does not flag files at the default max size as larger', () => {
+    mockStats({
+      isDirectory: false,
+      isFile: true,
+      isSymbolicLink: false,
+      size: 512 * 1024,
+    })
+
+    expect(isLargerThanDefaultMaxFileSize('test.md')).toBe(false)
+  })
+
+  test('does not flag files below the default max size as larger', () => {
+    mockStats({
+      isDirectory: false,
+      isFile: true,
+      isSymbolicLink: false,
+      size: 100 * 1024,
+    })
+
+    expect(isLargerThanDefaultMaxFileSize('test.md')).toBe(false)
   })
 })

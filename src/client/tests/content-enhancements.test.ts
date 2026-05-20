@@ -33,6 +33,16 @@ describe('content enhancements', () => {
     })
   })
 
+  test('does not duplicate copy buttons when enhancements run again', () => {
+    const root = markdownContent()
+    root.innerHTML = '<pre><code>const a = 1</code></pre>'
+
+    applyContentEnhancements(root)
+    applyContentEnhancements(root)
+
+    expect(document.querySelectorAll('.copy-button')).toHaveLength(1)
+  })
+
   test('does not add copy buttons when there are no code blocks', () => {
     const root = markdownContent()
     root.innerHTML = '<p>No code here</p>'

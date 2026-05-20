@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Reworked CLI parsing into a single-pass scheduler that keeps `--help` and `--version` terminal actions high-priority, skips local config for help when `--no-local-config` is present in any order, fills local config only for options not set on the CLI, and rejects repeated options or multiple Markdown file paths with direct errors.
 - Split markdown rendering into block generation and HTML assembly helpers so the app and watcher share the same block model while only building full HTML strings when they are actually needed.
 - Migrated client icons from checked-in SVG assets to icons rendered with the Lucide package.
+- Automatically disable file watching for previews over the built-in 512 KB default size threshold, while still allowing large documents to render when size validation is skipped or raised. `pvmd` now prints a startup notice that large previews may take longer to render in the browser, especially in Safari.
 
 ### Fixed
 

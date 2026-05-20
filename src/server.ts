@@ -60,10 +60,10 @@ function buildCSPHeader(nonce: string): string {
   ].join('; ')
 }
 
-function applyBodyDataAttributes(html: string): string {
+function applyBodyDataAttributes(html: string, watchEnabled: boolean): string {
   const attributes: string[] = []
 
-  if (!config.watch) {
+  if (!watchEnabled) {
     attributes.push('data-watch="false"')
   }
 
@@ -124,7 +124,7 @@ export function createServer(
 
     if (req.method === 'GET' && requestPath === '/') {
       try {
-        const html = applyBodyDataAttributes(getHTML())
+        const html = applyBodyDataAttributes(getHTML(), Boolean(handleSSE))
         const nonce = generateNonce()
         const htmlWithNonce = applyNonce(html, nonce)
         const csp = buildCSPHeader(nonce)

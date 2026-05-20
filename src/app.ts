@@ -1,12 +1,13 @@
 import type { Server } from 'node:http'
 import { dirname } from 'node:path'
-import { config } from './cli/config'
+import { config, DEFAULT_CONFIG } from './cli/config'
 import {
   readMarkdownFile,
   renderBlocksHtml,
   renderMarkdownBlocks,
   validateMarkdownPath,
 } from './markdown'
+import { isLargerThanDefaultMaxFileSize } from './markdown/file-validation'
 import { createServer, startServer } from './server'
 import { prepareHTML } from './template'
 import { resolvePath } from './utils/path-validation'
@@ -33,7 +34,14 @@ export function run(userPath: string) {
   validateMarkdownPath(fullPath)
 
   const httpsOnly = config.httpsOnly
-  const watcher = config.watch ? createWatcher(fullPath, httpsOnly) : null
+  const isLargeFile = isLargerThanDefaultMaxFileSize(fullPath)
+  const watchEnabled = config.watch && !isLargeFile
+  if (isLargeFile) {
+    console.log(
+      `Large markdown file detected (over ${DEFAULT_CONFIG.maxFileSize} KB). File watching is disabled for this preview, and the first browser render may take longer.`,
+    )
+  }
+  const watcher = watchEnabled ? createWatcher(fullPath, httpsOnly) : null
 
   const getHTML = () => {
     const markdownContent = readMarkdownFile(fullPath)

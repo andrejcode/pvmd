@@ -1,10 +1,20 @@
 import { createCopyIcon, renderIcons } from './icons'
 
+function hasCopyButton(pre: HTMLElement) {
+  return Array.from(pre.children).some((child) => {
+    return (
+      child instanceof HTMLButtonElement &&
+      child.classList.contains('copy-button')
+    )
+  })
+}
+
 function addCopyButtons(root: Element) {
   const codeBlocks = Array.from(root.querySelectorAll<HTMLElement>('pre code'))
   for (const code of codeBlocks) {
     const pre = code.parentElement
     if (!pre) continue
+    if (hasCopyButton(pre)) continue
 
     const button = document.createElement('button')
     button.className = 'copy-button'

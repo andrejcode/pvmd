@@ -45,8 +45,9 @@ async function withTestServer(
     request: (path: string, init?: RequestInit) => Promise<Response>,
   ) => Promise<void>,
   baseDir?: string,
+  handleSSE?: Parameters<typeof createServer>[1],
 ) {
-  const server = createServer(() => HTML_WITH_APP_SCRIPT, undefined, baseDir)
+  const server = createServer(() => HTML_WITH_APP_SCRIPT, handleSSE, baseDir)
   const port = await listenOnRandomPort(server)
 
   try {
@@ -176,24 +177,43 @@ describe('createServer', () => {
   test('GET / with watch disabled injects data-watch="false" on body', async () => {
     config.watch = false
 
-    try {
-      await withTestServer(async (request) => {
-        const res = await request(ROOT_PATH)
-        const body = await res.text()
-        expect(body).toContain('data-watch="false"')
-      })
-    } finally {
-      config.watch = true
-    }
+    await withTestServer(async (request) => {
+      const res = await request(ROOT_PATH)
+      const body = await res.text()
+      expect(body).toContain('data-watch="false"')
+    })
   })
 
-  test('GET / with watch enabled does not inject data-watch="false"', async () => {
+  test('GET / with live update handler does not inject data-watch="false"', async () => {
+    config.watch = true
+
+    await withTestServer(
+      async (request) => {
+        const res = await request(ROOT_PATH)
+        const body = await res.text()
+        expect(body).not.toContain('data-watch="false"')
+      },
+      undefined,
+      vi.fn(),
+    )
+  })
+
+  test('GET / without live update handler injects data-watch="false"', async () => {
     config.watch = true
 
     await withTestServer(async (request) => {
       const res = await request(ROOT_PATH)
       const body = await res.text()
-      expect(body).not.toContain('data-watch="false"')
+      expect(body).toContain('data-watch="false"')
+    })
+  })
+
+  test('GET /events returns 404 when no live update handler is registered', async () => {
+    await withTestServer(async (request) => {
+      const res = await request('/events')
+
+      expect(res.status).toBe(404)
+      expect(res.headers.get('content-type')).toBe('application/json')
     })
   })
 

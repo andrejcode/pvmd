@@ -1,8 +1,9 @@
 import { lstatSync, type Stats } from 'node:fs'
 import { extname } from 'node:path'
-import { config } from '@/cli/config'
+import { config, DEFAULT_CONFIG } from '@/cli/config'
 import { processFileSystemError } from '@/utils/file-error'
 
+const BYTES_PER_KB = 1024
 const VALID_MARKDOWN_EXTENSIONS: readonly string[] = [
   '.md',
   '.markdown',
@@ -23,6 +24,14 @@ function formatMaxFileSize(sizeInKB: number): string {
   return FILE_SIZE_FORMATTER.format(sizeInKB)
 }
 
+function readFileStats(path: string): Stats {
+  try {
+    return lstatSync(path)
+  } catch (error) {
+    throw new Error(processFileSystemError(error, path))
+  }
+}
+
 export function validateMarkdownExtension(path: string): void {
   const extension = extname(path).toLowerCase()
 
@@ -33,13 +42,13 @@ export function validateMarkdownExtension(path: string): void {
   }
 }
 
+export function isLargerThanDefaultMaxFileSize(path: string): boolean {
+  const stats = readFileStats(path)
+  return stats.size > DEFAULT_CONFIG.maxFileSize * BYTES_PER_KB
+}
+
 export function validateFile(path: string): void {
-  let stats: Stats
-  try {
-    stats = lstatSync(path)
-  } catch (error) {
-    throw new Error(processFileSystemError(error, path))
-  }
+  const stats = readFileStats(path)
 
   if (stats.isDirectory()) {
     throw new Error(`Path is a directory: ${path}`)
@@ -54,7 +63,7 @@ export function validateFile(path: string): void {
   }
 
   if (!config.skipSizeCheck) {
-    const maxFileSizeBytes = config.maxFileSize * 1024
+    const maxFileSizeBytes = config.maxFileSize * BYTES_PER_KB
     const maxFileSizeLabel = formatMaxFileSize(config.maxFileSize)
 
     if (stats.size > maxFileSizeBytes) {
