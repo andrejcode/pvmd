@@ -21,6 +21,7 @@
 - GitHub-style Markdown rendering with syntax highlighting, alerts, footnotes, heading anchors, emoji, and KaTeX
 - Copy buttons for fenced code blocks and local static image serving for Markdown content
 - Optional browser auto-open, browser selection, and `--https-only` filtering for remote links and images
+- Large-file preview safeguards that disable watching automatically when live updates would be too costly
 - Strict file validation, path traversal protection, and user-friendly error handling
 
 ## Installation
