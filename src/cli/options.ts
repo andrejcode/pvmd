@@ -4,6 +4,7 @@ import {
   formatSupportedThemes,
   parseBrowserValue,
   parseMaxFileSizeValue,
+  parseMaxImageSizeValue,
   parsePortValue,
   parseThemeValue,
   type Config,
@@ -51,7 +52,7 @@ export const options: Record<string, Option> = {
     kind: 'config',
     configKey: 'skipSizeCheck',
     description: () => {
-      return `Skip file size validation (default: ${formatEnabledDefault(config.skipSizeCheck)})`
+      return `Skip Markdown file size validation (default: ${formatEnabledDefault(config.skipSizeCheck)})`
     },
     action: () => {
       config.skipSizeCheck = true
@@ -69,10 +70,22 @@ export const options: Record<string, Option> = {
     takesValue: true,
     configKey: 'maxFileSize',
     description: () => {
-      return `Maximum file size in KB (default: ${config.maxFileSize})`
+      return `Maximum Markdown file size in KB (default: ${config.maxFileSize})`
     },
     action: (value?: string) => {
       config.maxFileSize = parseMaxFileSizeValue(value)
+    },
+  },
+  'max-image-size': {
+    kind: 'config',
+    value: '<kb>',
+    takesValue: true,
+    configKey: 'maxImageSize',
+    description: () => {
+      return `Maximum local image size in KB (default: ${config.maxImageSize})`
+    },
+    action: (value?: string) => {
+      config.maxImageSize = parseMaxImageSizeValue(value)
     },
   },
   'no-watch': {

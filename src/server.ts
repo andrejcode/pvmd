@@ -8,7 +8,7 @@ import {
 import { config } from './cli/config'
 import openPreviewInBrowser from './open-browser'
 import { exitWithError } from './utils/fatal-error'
-import { resolveStaticFile } from './utils/static-file'
+import { ImageTooLargeError, resolveStaticFile } from './utils/static-file'
 
 type RequestHandler = (req: IncomingMessage, res: ServerResponse) => void
 
@@ -100,7 +100,19 @@ function serveStaticFile(
     const { data, headers } = resolveStaticFile(relativePath, baseDir)
     res.writeHead(200, headers)
     res.end(data)
-  } catch {
+  } catch (error) {
+    if (error instanceof ImageTooLargeError) {
+      console.error(error.message)
+      res.writeHead(413, {
+        'content-type': 'application/json',
+        'cache-control': 'no-store',
+        ...SECURITY_HEADERS,
+      })
+      res.end(
+        JSON.stringify({ error: 'Content Too Large', message: error.message }),
+      )
+      return
+    }
     respondNotFound(req, res)
   }
 }

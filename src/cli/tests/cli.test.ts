@@ -62,6 +62,7 @@ describe('parseArguments', () => {
         port: 8123,
         skipSizeCheck: true,
         maxFileSize: 640,
+        maxImageSize: 40960,
         watch: false,
         httpsOnly: true,
         open: true,
@@ -78,8 +79,15 @@ describe('parseArguments', () => {
       expect(output).toContain(
         'Port number (default: 8123; use 0 for a random available port)',
       )
-      expect(output).toContain('Skip file size validation (default: true)')
-      expect(output).toContain('Maximum file size in KB (default: 640)')
+      expect(output).toContain(
+        'Skip Markdown file size validation (default: true)',
+      )
+      expect(output).toContain(
+        'Maximum Markdown file size in KB (default: 640)',
+      )
+      expect(output).toContain(
+        'Maximum local image size in KB (default: 40960)',
+      )
       expect(output).toContain('Skip file watching (default: true)')
       expect(output).toContain(
         'Only allow HTTPS URLs for images and links (default: true)',
@@ -118,6 +126,7 @@ describe('parseArguments', () => {
           port: 8123,
           skipSizeCheck: true,
           maxFileSize: 640,
+          maxImageSize: 40960,
           watch: false,
           httpsOnly: true,
           open: true,
@@ -132,8 +141,15 @@ describe('parseArguments', () => {
         expect(output).toContain(
           'Port number (default: 8765; use 0 for a random available port)',
         )
-        expect(output).toContain('Skip file size validation (default: false)')
-        expect(output).toContain('Maximum file size in KB (default: 512)')
+        expect(output).toContain(
+          'Skip Markdown file size validation (default: false)',
+        )
+        expect(output).toContain(
+          'Maximum Markdown file size in KB (default: 512)',
+        )
+        expect(output).toContain(
+          'Maximum local image size in KB (default: 20480)',
+        )
         expect(output).toContain('Skip file watching (default: false)')
         expect(output).toContain(
           'Only allow HTTPS URLs for images and links (default: false)',
@@ -406,13 +422,57 @@ describe('parseArguments', () => {
       'Max size option requires a value.',
     )
     expect(() => parseArguments(['test.md', '--max-size', '0'])).toThrow(
-      'Max size must be a positive number.',
+      'Max size must be a finite positive number.',
     )
     expect(() => parseArguments(['test.md', '--max-size', '-1'])).toThrow(
-      'Max size must be a positive number.',
+      'Max size must be a finite positive number.',
     )
     expect(() => parseArguments(['test.md', '--max-size', 'a'])).toThrow(
-      'Max size must be a positive number.',
+      'Max size must be a finite positive number.',
     )
+  })
+
+  test('loads the image size limit from config and lets the CLI override it', () => {
+    mockLocalConfig({ maxImageSize: 40960 })
+    parseArguments(['test.md'])
+    expect(config.maxImageSize).toBe(40960)
+
+    parseArguments(['test.md', '--max-image-size', '8192.5'])
+    expect(config.maxImageSize).toBe(8192.5)
+    expect(config.maxFileSize).toBe(DEFAULT_CONFIG.maxFileSize)
+  })
+
+  test('rejects missing and duplicate max-image-size options', () => {
+    expect(() => parseArguments(['test.md', '--max-image-size'])).toThrow(
+      'Max image size option requires a value.',
+    )
+    expect(() =>
+      parseArguments([
+        'test.md',
+        '--max-image-size',
+        '1024',
+        '--max-image-size',
+        '2048',
+      ]),
+    ).toThrow('Option "--max-image-size" was provided multiple times.')
+  })
+
+  describe.each([
+    ['--max-size', 'Max size', 'maxFileSize'],
+    ['--max-image-size', 'Max image size', 'maxImageSize'],
+  ] as const)('%s size validation', (option, label, configKey) => {
+    test.each(['0', '-1', 'invalid', 'Infinity', 'NaN', ' '])(
+      'rejects invalid value %s',
+      (value) => {
+        expect(() => parseArguments(['test.md', option, value])).toThrow(
+          `${label} must be a finite positive number.`,
+        )
+      },
+    )
+
+    test('accepts a positive fractional value', () => {
+      parseArguments(['test.md', option, '8192.5'])
+      expect(config[configKey]).toBe(8192.5)
+    })
   })
 })

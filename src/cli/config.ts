@@ -28,6 +28,7 @@ export interface Config {
   port: number
   skipSizeCheck: boolean
   maxFileSize: number
+  maxImageSize: number
   watch: boolean
   httpsOnly: boolean
   open: boolean
@@ -39,6 +40,7 @@ export const DEFAULT_CONFIG: Config = {
   port: 8765,
   skipSizeCheck: false,
   maxFileSize: 512,
+  maxImageSize: 20 * 1024,
   watch: true,
   httpsOnly: false,
   open: false,
@@ -95,17 +97,29 @@ export function parsePortValue(value: unknown): number {
   return parsed
 }
 
-export function parseMaxFileSizeValue(value: unknown): number {
+function parseSizeValue(value: unknown, label: string): number {
   if (value === undefined || value === null || value === '') {
-    throw new Error('Max size option requires a value.')
+    throw new Error(`${label} option requires a value.`)
   }
 
   const parsed = Number(value)
-  if (isNaN(parsed) || parsed <= 0) {
-    throw new Error('Max size must be a positive number.')
+  if (
+    (typeof value !== 'number' && typeof value !== 'string') ||
+    !Number.isFinite(parsed) ||
+    parsed <= 0
+  ) {
+    throw new Error(`${label} must be a finite positive number.`)
   }
 
   return parsed
+}
+
+export function parseMaxFileSizeValue(value: unknown): number {
+  return parseSizeValue(value, 'Max size')
+}
+
+export function parseMaxImageSizeValue(value: unknown): number {
+  return parseSizeValue(value, 'Max image size')
 }
 
 export function parseBrowserValue(value: unknown): BrowserOption {

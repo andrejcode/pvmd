@@ -1,7 +1,16 @@
 import { readFileSync } from 'node:fs'
 import { extname } from 'node:path'
-import { validateFile } from '@/markdown/file-validation'
+import { config } from '@/cli/config'
+import { FileTooLargeError, validateFile } from '@/markdown/file-validation'
 import { resolvePath } from './path-validation'
+
+export class ImageTooLargeError extends Error {
+  constructor(relativePath: string) {
+    super(
+      `Local image is too large: ${relativePath}. Maximum image size is ${config.maxImageSize} KB. Resize or compress the image, or raise the limit with --max-image-size <kb> or "maxImageSize" in ~/.pvmd/config.json.`,
+    )
+  }
+}
 
 const IMAGE_MIME_TYPES: Readonly<Record<string, string>> = {
   '.avif': 'image/avif',
@@ -42,7 +51,14 @@ export function resolveStaticFile(
   }
 
   const filePath = resolvePath(relativePath, baseDir)
-  validateFile(filePath)
+  try {
+    validateFile(filePath, config.maxImageSize)
+  } catch (error) {
+    if (error instanceof FileTooLargeError) {
+      throw new ImageTooLargeError(relativePath)
+    }
+    throw error
+  }
 
   const data = readFileSync(filePath)
 

@@ -183,6 +183,28 @@ describe('validateFile', () => {
     expect(() => validateFile('test.md')).not.toThrow()
   })
 
+  test('should use an explicit size limit independently of Markdown config', () => {
+    config.maxFileSize = 1
+    config.skipSizeCheck = true
+    mockStats({
+      isDirectory: false,
+      isFile: true,
+      isSymbolicLink: false,
+      size: 20 * 1024 * 1024,
+    })
+    expect(() => validateFile('photo.png', 20 * 1024)).not.toThrow()
+
+    mockStats({
+      isDirectory: false,
+      isFile: true,
+      isSymbolicLink: false,
+      size: 20 * 1024 * 1024 + 1,
+    })
+    expect(() => validateFile('photo.png', 20 * 1024)).toThrow(
+      'Maximum size is 20480 KB',
+    )
+  })
+
   test('should throw an error with custom maxFileSize when exceeded', () => {
     config.maxFileSize = 1024
     const twelveHundredKB = 1200 * 1024

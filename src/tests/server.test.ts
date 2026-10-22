@@ -1,4 +1,10 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  truncateSync,
+  rmSync,
+} from 'node:fs'
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -356,6 +362,12 @@ describe('static file serving', () => {
     mkdirSync(join(tmpDir, 'sub'))
     writeFileSync(join(tmpDir, 'sub', 'nested.jpg'), pngContent)
     writeFileSync(join(tmpDir, 'script.js'), 'alert(1)')
+    writeFileSync(
+      join(tmpDir, 'sub', 'screenshot.png'),
+      Buffer.alloc(600 * 1024),
+    )
+    writeFileSync(join(tmpDir, 'oversized.png'), '')
+    truncateSync(join(tmpDir, 'oversized.png'), 20 * 1024 * 1024 + 1)
   })
 
   afterAll(() => {
@@ -382,6 +394,92 @@ describe('static file serving', () => {
       expect(res.headers.get('content-type')).toBe('image/jpeg')
     }, tmpDir)
   })
+
+  test.each([512, 1])(
+    'serves screenshots larger than the Markdown limit of %i KB',
+    async (maxFileSize) => {
+      const savedConfig = { ...config }
+      config.maxFileSize = maxFileSize
+      config.skipSizeCheck = false
+
+      try {
+        await withTestServer(async (request) => {
+          const res = await request('/sub/screenshot.png')
+          expect(res.status).toBe(200)
+          expect(res.headers.get('content-type')).toBe('image/png')
+          expect((await res.arrayBuffer()).byteLength).toBe(600 * 1024)
+        }, tmpDir)
+      } finally {
+        Object.assign(config, savedConfig)
+      }
+    },
+  )
+
+  test.each([
+    [600, 200],
+    [599.5, 413],
+  ])(
+    'applies the configured image limit of %s KB',
+    async (maxImageSize, expectedStatus) => {
+      const savedConfig = { ...config }
+      config.maxImageSize = maxImageSize
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {})
+
+      try {
+        await withTestServer(async (request) => {
+          const res = await request('/sub/screenshot.png')
+          expect(res.status).toBe(expectedStatus)
+          if (expectedStatus === 413) {
+            const body = (await res.json()) as { message: string }
+            expect(body.message).toContain(
+              `Maximum image size is ${maxImageSize} KB`,
+            )
+            expect(consoleErrorSpy).toHaveBeenCalledWith(body.message)
+          } else {
+            expect((await res.arrayBuffer()).byteLength).toBe(600 * 1024)
+          }
+        }, tmpDir)
+      } finally {
+        consoleErrorSpy.mockRestore()
+        Object.assign(config, savedConfig)
+      }
+    },
+  )
+
+  test.each([false, true])(
+    'returns 413 and logs a remedy above 20 MiB with skipSizeCheck=%s',
+    async (skipSizeCheck) => {
+      const savedConfig = { ...config }
+      config.skipSizeCheck = skipSizeCheck
+      config.maxFileSize = 40 * 1024
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {})
+
+      try {
+        await withTestServer(async (request) => {
+          const res = await request('/oversized.png')
+          expect(res.status).toBe(413)
+          expect(res.headers.get('content-type')).toBe('application/json')
+          expect(res.headers.get('cache-control')).toBe('no-store')
+          const body = (await res.json()) as { error: string; message: string }
+          expect(body.error).toBe('Content Too Large')
+          expect(body.message).toContain('oversized.png')
+          expect(body.message).toContain('Maximum image size is 20480 KB')
+          expect(body.message).toContain('Resize or compress')
+          expect(body.message).toContain('--max-image-size <kb>')
+          expect(body.message).toContain('"maxImageSize"')
+          expect(body.message).not.toContain(tmpDir)
+          expect(consoleErrorSpy).toHaveBeenCalledWith(body.message)
+        }, tmpDir)
+      } finally {
+        consoleErrorSpy.mockRestore()
+        Object.assign(config, savedConfig)
+      }
+    },
+  )
 
   test('SVG response includes restrictive CSP header', async () => {
     await withTestServer(async (request) => {

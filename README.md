@@ -109,15 +109,26 @@ Use a local config file for project defaults:
 
 For Markdown files larger than the built-in default max size of 512 KB, `pvmd` automatically disables file watching for that preview. You can still preview larger files with `--no-size-check` or by raising `--max-size`, but live updates are skipped to avoid expensive reprocessing while editing. The first browser render can also take longer for large documents, especially in Safari, because the browser still has to lay out the full rendered document.
 
+Local images work in both Markdown image syntax and HTML `<img>` tags. Paths such as `./screenshots/example.png` are relative to the Markdown file's folder and must stay within that folder. Supported formats are AVIF, GIF, ICO, JPEG, PNG, SVG, and WebP.
+
+Images have a separate default limit of 20 MiB (20480 KB) per file. Customize it with `--max-image-size <kb>` or the `maxImageSize` config key. Neither `--max-size` nor `--no-size-check` affects images. Oversized images return HTTP `413 Content Too Large`, and the terminal prints the filename, limit, and guidance to resize, compress, or raise the limit.
+
+For example, allow local images up to 40 MiB:
+
+```bash
+pvmd README.md --max-image-size 40960
+```
+
 ## CLI Options
 
 The built-in defaults below are the fallback values when no local config is present. `pvmd --help` shows the effective defaults after applying `~/.pvmd/config.json`, and help with `--no-local-config` shows the built-in defaults directly regardless of flag order. Explicit CLI flags still take precedence.
 
 ```text
 -p, --port <port>       Port number (default: 8765; use 0 for a random port)
---no-size-check         Skip file size validation
+--no-size-check         Skip Markdown file size validation
 --no-local-config       Ignore ~/.pvmd/config.json and use built-in defaults as the baseline
---max-size <kb>         Maximum file size in KB (default: 512)
+--max-size <kb>         Maximum Markdown file size in KB (default: 512)
+--max-image-size <kb>   Maximum local image size in KB (default: 20480)
 --no-watch              Skip file watching
 --https-only            Only allow HTTPS URLs for images and links
 -o, --open              Open in default browser automatically
@@ -150,7 +161,7 @@ There is only one shared config location for the current user. Those config valu
 
 If you want one run to ignore that file completely and start from the built-in defaults, pass `--no-local-config`.
 
-Supported config keys are: `port`, `skipSizeCheck`, `maxFileSize`, `watch`, `httpsOnly`, `open`, `browser`, and `theme`.
+Supported config keys are: `port`, `skipSizeCheck`, `maxFileSize`, `maxImageSize`, `watch`, `httpsOnly`, `open`, `browser`, and `theme`. Both size settings use KB and must be finite positive numbers. `skipSizeCheck` applies only to Markdown files.
 
 Example:
 
@@ -160,6 +171,7 @@ Example:
   "browser": "chrome",
   "theme": "dark",
   "port": 9000,
+  "maxImageSize": 40960,
   "watch": true,
   "httpsOnly": false
 }

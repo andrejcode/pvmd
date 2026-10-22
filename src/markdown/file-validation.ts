@@ -47,7 +47,14 @@ export function isLargerThanDefaultMaxFileSize(path: string): boolean {
   return stats.size > DEFAULT_CONFIG.maxFileSize * BYTES_PER_KB
 }
 
-export function validateFile(path: string): void {
+export class FileTooLargeError extends Error {}
+
+export function validateFile(
+  path: string,
+  maxFileSizeKB: number | null = config.skipSizeCheck
+    ? null
+    : config.maxFileSize,
+): void {
   const stats = readFileStats(path)
 
   if (stats.isDirectory()) {
@@ -62,12 +69,12 @@ export function validateFile(path: string): void {
     throw new Error(`Path is not a file: ${path}`)
   }
 
-  if (!config.skipSizeCheck) {
-    const maxFileSizeBytes = config.maxFileSize * BYTES_PER_KB
-    const maxFileSizeLabel = formatMaxFileSize(config.maxFileSize)
+  if (maxFileSizeKB !== null) {
+    const maxFileSizeBytes = maxFileSizeKB * BYTES_PER_KB
+    const maxFileSizeLabel = formatMaxFileSize(maxFileSizeKB)
 
     if (stats.size > maxFileSizeBytes) {
-      throw new Error(
+      throw new FileTooLargeError(
         `File is too large: ${path}. Maximum size is ${maxFileSizeLabel} KB.\nUse --no-size-check to disable file size validation or --max-size <kb> to raise the limit.`,
       )
     }

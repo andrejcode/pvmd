@@ -79,7 +79,10 @@ describe('resolveStaticFile', () => {
 
   test('should call validateFile with the resolved path', () => {
     resolveStaticFile('photo.png', BASE_DIR)
-    expect(validateFile).toHaveBeenCalledWith(`${BASE_DIR}/photo.png`)
+    expect(validateFile).toHaveBeenCalledWith(
+      `${BASE_DIR}/photo.png`,
+      20 * 1024,
+    )
   })
 
   test('should return file data from readFileSync', () => {

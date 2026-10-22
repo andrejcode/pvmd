@@ -45,6 +45,7 @@ describe('local config', () => {
         port: 7777,
         skipSizeCheck: true,
         maxFileSize: 640,
+        maxImageSize: 40960,
         watch: false,
         httpsOnly: true,
         open: true,
@@ -58,6 +59,7 @@ describe('local config', () => {
         port: 7777,
         skipSizeCheck: true,
         maxFileSize: 640,
+        maxImageSize: 40960,
         watch: false,
         httpsOnly: true,
         open: true,
@@ -107,10 +109,21 @@ describe('local config', () => {
       applyLocalConfig({ nope: true })
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Unsupported setting "nope" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSize, watch, httpsOnly, open, browser, theme. Ignoring setting.',
+        'Unsupported setting "nope" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSize, maxImageSize, watch, httpsOnly, open, browser, theme. Ignoring setting.',
       )
       expect(config).toMatchObject(DEFAULT_CONFIG)
     })
+
+    test.each([0, -1, Infinity, NaN, true, null, [], {}, 'invalid'])(
+      'warns and keeps the default for invalid maxImageSize %j',
+      (value) => {
+        applyLocalConfig({ maxImageSize: value })
+        expect(config.maxImageSize).toBe(DEFAULT_CONFIG.maxImageSize)
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Invalid setting "maxImageSize"'),
+        )
+      },
+    )
 
     test('warns on invalid boolean settings and ignores them', () => {
       applyLocalConfig({ open: 'yes' })
@@ -133,7 +146,7 @@ describe('local config', () => {
         'Invalid setting "port" in .pvmd/config.json. Port 6666 is blocked by browsers for security reasons. Ignoring setting.',
       )
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Unsupported setting "unknownConfig" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSize, watch, httpsOnly, open, browser, theme. Ignoring setting.',
+        'Unsupported setting "unknownConfig" in .pvmd/config.json. Supported settings: port, skipSizeCheck, maxFileSize, maxImageSize, watch, httpsOnly, open, browser, theme. Ignoring setting.',
       )
       expect(config.port).toBe(DEFAULT_CONFIG.port)
       expect(config.theme).toBe('dark')

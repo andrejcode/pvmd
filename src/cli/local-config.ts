@@ -8,6 +8,7 @@ import {
   LOCAL_CONFIG_RELATIVE_PATH,
   parseBrowserValue,
   parseMaxFileSizeValue,
+  parseMaxImageSizeValue,
   parsePortValue,
   parseThemeValue,
   type Config,
@@ -17,6 +18,7 @@ const CONFIG_KEYS = [
   'port',
   'skipSizeCheck',
   'maxFileSize',
+  'maxImageSize',
   'watch',
   'httpsOnly',
   'open',
@@ -124,6 +126,13 @@ export function applyLocalConfig(
             key,
             rawValue,
             parseMaxFileSizeValue,
+          )
+          break
+        case 'maxImageSize':
+          config.maxImageSize = parseConfigNumber(
+            key,
+            rawValue,
+            parseMaxImageSizeValue,
           )
           break
         case 'watch':
