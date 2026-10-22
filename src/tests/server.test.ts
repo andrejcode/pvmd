@@ -387,6 +387,50 @@ describe('static file serving', () => {
     }, tmpDir)
   })
 
+  test('disabling local files blocks images but preserves the preview and live updates', async () => {
+    const savedLocalFiles = config.localFiles
+    config.localFiles = false
+    const handleSSE = vi.fn((_req: IncomingMessage, res: ServerResponse) => {
+      res.writeHead(200, { 'content-type': 'text/event-stream' })
+      res.end('data: test\n\n')
+    })
+
+    try {
+      await withTestServer(
+        async (request) => {
+          for (const path of [
+            '/photo.png',
+            '/icon.svg',
+            '/sub/nested.jpg',
+            '/photo.png?v=123',
+            '/oversized.png',
+          ]) {
+            const res = await request(path)
+            expect(res.status).toBe(404)
+            expect(await res.json()).toEqual({
+              error: 'Not Found',
+              message: `Cannot GET ${path}`,
+            })
+          }
+
+          const preview = await request('/')
+          expect(preview.status).toBe(200)
+          expect(await preview.text()).toContain('<main><p>content</p></main>')
+
+          const events = await request('/events')
+          expect(events.status).toBe(200)
+          expect(events.headers.get('content-type')).toBe('text/event-stream')
+          expect(await events.text()).toBe('data: test\n\n')
+          expect(handleSSE).toHaveBeenCalledOnce()
+        },
+        tmpDir,
+        handleSSE,
+      )
+    } finally {
+      config.localFiles = savedLocalFiles
+    }
+  })
+
   test('serves files from nested directories', async () => {
     await withTestServer(async (request) => {
       const res = await request('/sub/nested.jpg')

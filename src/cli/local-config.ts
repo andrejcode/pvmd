@@ -19,6 +19,7 @@ const CONFIG_KEYS = [
   'skipSizeCheck',
   'maxFileSize',
   'maxImageSize',
+  'localFiles',
   'watch',
   'httpsOnly',
   'open',
@@ -134,6 +135,9 @@ export function applyLocalConfig(
             rawValue,
             parseMaxImageSizeValue,
           )
+          break
+        case 'localFiles':
+          config.localFiles = parseConfigBoolean(key, rawValue)
           break
         case 'watch':
           config.watch = parseConfigBoolean(key, rawValue)

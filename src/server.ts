@@ -152,7 +152,12 @@ export function createServer(
       }
     } else if (req.method === 'GET' && requestPath === '/events' && handleSSE) {
       handleSSE(req, res)
-    } else if (req.method === 'GET' && requestPath && baseDir) {
+    } else if (
+      req.method === 'GET' &&
+      requestPath &&
+      baseDir &&
+      config.localFiles
+    ) {
       serveStaticFile(req, res, baseDir)
     } else {
       respondNotFound(req, res)

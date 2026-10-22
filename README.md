@@ -111,6 +111,8 @@ For Markdown files larger than the built-in default max size of 512 KB, `pvmd` a
 
 Local images work in both Markdown image syntax and HTML `<img>` tags. Paths such as `./screenshots/example.png` are relative to the Markdown file's folder and must stay within that folder. Supported formats are AVIF, GIF, ICO, JPEG, PNG, SVG, and WebP.
 
+Local file serving is enabled by default. Disable it with `pvmd README.md --no-local-files` or set `"localFiles": false` in config. Local image requests then return HTTP `404`; the Markdown preview, live updates, and remote images are unaffected.
+
 Images have a separate default limit of 20 MiB (20480 KB) per file. Customize it with `--max-image-size <kb>` or the `maxImageSize` config key. Neither `--max-size` nor `--no-size-check` affects images. Oversized images return HTTP `413 Content Too Large`, and the terminal prints the filename, limit, and guidance to resize, compress, or raise the limit.
 
 For example, allow local images up to 40 MiB:
@@ -129,6 +131,7 @@ The built-in defaults below are the fallback values when no local config is pres
 --no-local-config       Ignore ~/.pvmd/config.json and use built-in defaults as the baseline
 --max-size <kb>         Maximum Markdown file size in KB (default: 512)
 --max-image-size <kb>   Maximum local image size in KB (default: 20480)
+--no-local-files        Disable local file serving
 --no-watch              Skip file watching
 --https-only            Only allow HTTPS URLs for images and links
 -o, --open              Open in default browser automatically
@@ -161,7 +164,7 @@ There is only one shared config location for the current user. Those config valu
 
 If you want one run to ignore that file completely and start from the built-in defaults, pass `--no-local-config`.
 
-Supported config keys are: `port`, `skipSizeCheck`, `maxFileSize`, `maxImageSize`, `watch`, `httpsOnly`, `open`, `browser`, and `theme`. Both size settings use KB and must be finite positive numbers. `skipSizeCheck` applies only to Markdown files.
+Supported config keys are: `port`, `skipSizeCheck`, `maxFileSize`, `maxImageSize`, `localFiles`, `watch`, `httpsOnly`, `open`, `browser`, and `theme`. Both size settings use KB and must be finite positive numbers. `skipSizeCheck` applies only to Markdown files. `localFiles` is a boolean and defaults to `true`.
 
 Example:
 
@@ -172,6 +175,7 @@ Example:
   "theme": "dark",
   "port": 9000,
   "maxImageSize": 40960,
+  "localFiles": true,
   "watch": true,
   "httpsOnly": false
 }

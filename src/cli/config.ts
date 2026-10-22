@@ -29,6 +29,7 @@ export interface Config {
   skipSizeCheck: boolean
   maxFileSize: number
   maxImageSize: number
+  localFiles: boolean
   watch: boolean
   httpsOnly: boolean
   open: boolean
@@ -41,6 +42,7 @@ export const DEFAULT_CONFIG: Config = {
   skipSizeCheck: false,
   maxFileSize: 512,
   maxImageSize: 20 * 1024,
+  localFiles: true,
   watch: true,
   httpsOnly: false,
   open: false,

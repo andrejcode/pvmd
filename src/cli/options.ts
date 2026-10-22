@@ -88,6 +88,16 @@ export const options: Record<string, Option> = {
       config.maxImageSize = parseMaxImageSizeValue(value)
     },
   },
+  'no-local-files': {
+    kind: 'config',
+    configKey: 'localFiles',
+    description: () => {
+      return `Disable local file serving (default: ${formatEnabledDefault(!config.localFiles)})`
+    },
+    action: () => {
+      config.localFiles = false
+    },
+  },
   'no-watch': {
     kind: 'config',
     configKey: 'watch',

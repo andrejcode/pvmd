@@ -63,6 +63,7 @@ describe('parseArguments', () => {
         skipSizeCheck: true,
         maxFileSize: 640,
         maxImageSize: 40960,
+        localFiles: false,
         watch: false,
         httpsOnly: true,
         open: true,
@@ -88,6 +89,7 @@ describe('parseArguments', () => {
       expect(output).toContain(
         'Maximum local image size in KB (default: 40960)',
       )
+      expect(output).toContain('Disable local file serving (default: true)')
       expect(output).toContain('Skip file watching (default: true)')
       expect(output).toContain(
         'Only allow HTTPS URLs for images and links (default: true)',
@@ -127,6 +129,7 @@ describe('parseArguments', () => {
           skipSizeCheck: true,
           maxFileSize: 640,
           maxImageSize: 40960,
+          localFiles: false,
           watch: false,
           httpsOnly: true,
           open: true,
@@ -150,6 +153,7 @@ describe('parseArguments', () => {
         expect(output).toContain(
           'Maximum local image size in KB (default: 20480)',
         )
+        expect(output).toContain('Disable local file serving (default: false)')
         expect(output).toContain('Skip file watching (default: false)')
         expect(output).toContain(
           'Only allow HTTPS URLs for images and links (default: false)',
@@ -430,6 +434,35 @@ describe('parseArguments', () => {
     expect(() => parseArguments(['test.md', '--max-size', 'a'])).toThrow(
       'Max size must be a finite positive number.',
     )
+  })
+
+  test('enables local files by default and allows config to disable them', () => {
+    parseArguments(['test.md'])
+    expect(config.localFiles).toBe(true)
+
+    mockLocalConfig({ localFiles: false })
+    parseArguments(['test.md'])
+    expect(config.localFiles).toBe(false)
+  })
+
+  test('no-local-files overrides config without changing watching or image limits', () => {
+    mockLocalConfig({ localFiles: true })
+    parseArguments(['test.md', '--no-local-files'])
+    expect(config.localFiles).toBe(false)
+    expect(config.watch).toBe(DEFAULT_CONFIG.watch)
+    expect(config.maxImageSize).toBe(DEFAULT_CONFIG.maxImageSize)
+  })
+
+  test('no-local-config ignores the configured localFiles setting', () => {
+    mockLocalConfig({ localFiles: false })
+    parseArguments(['test.md', '--no-local-config'])
+    expect(config.localFiles).toBe(true)
+  })
+
+  test('rejects duplicate no-local-files flags', () => {
+    expect(() =>
+      parseArguments(['test.md', '--no-local-files', '--no-local-files']),
+    ).toThrow('Option "--no-local-files" was provided multiple times.')
   })
 
   test('loads the image size limit from config and lets the CLI override it', () => {
