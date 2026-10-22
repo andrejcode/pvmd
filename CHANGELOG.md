@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.1 - 2026-10-22
+
+### Added
+
+- Added `--max-image-size <kb>` and the `maxImageSize` config setting to customize the local image size limit, which defaults to 20 MiB (20480 KB).
+- Added `--no-local-files` and the `localFiles` config setting to disable local file serving without affecting the Markdown preview, live updates, or remote images. Local file serving remains enabled by default.
+
+### Changed
+
+- Separated local image size validation from Markdown size validation. `--max-size`, `maxFileSize`, and `--no-size-check` now apply only to Markdown files.
+- Shared size-value parsing between Markdown and image limits, requiring finite positive numbers for both.
+
+### Fixed
+
+- Replaced misleading HTTP `404` responses for oversized local images with HTTP `413 Content Too Large` and terminal messages showing the filename, effective limit, and guidance to resize, compress, or raise the image limit.
+
 ## 0.3.0 - 2026-05-20
 
 ### Added

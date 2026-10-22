@@ -29,7 +29,7 @@ npm run lint           # run ESLint
 npm run format:check   # check Prettier formatting
 ```
 
-`npm run dev -- README.md` starts the development server for a file. The dev script launches two processes: `tsx src/index.ts ...` for the Node app and `esbuild.client.dev.js` for the browser bundle watcher.
+`npm run dev -- README.md --no-local-config` starts the development server with built-in settings so your user config does not affect testing. The dev script launches `tsx src/index.ts ...` for the Node app and `esbuild.client.dev.js` for the browser bundle watcher. Restart the command after Node-side code changes. The app process is not a source-code watcher.
 
 ## Source Layout
 
@@ -41,6 +41,7 @@ npm run format:check   # check Prettier formatting
 - `src/server.ts` owns the local HTTP server, response headers, CSP nonce injection, body data attributes, `/events`, static image serving, browser auto-open, and startup errors.
 - `src/client/` is the browser app. It connects to live updates, applies full or patch updates, preserves `<details>` state, adds copy buttons, disables rendered form controls, opens external links in new tabs, and shows the disconnected alert.
 - `src/shared/` contains types and constants shared by the Node app and browser client.
+- `src/utils/static-file.ts` resolves local image files, applies image size limits, and sets image response headers.
 - `src/tests/`, `src/**/tests/`, and `src/client/tests/` contain Node and jsdom tests.
 
 ## Runtime Flow
@@ -55,7 +56,7 @@ npm run format:check   # check Prettier formatting
 
 ## CLI And Config
 
-Built-in defaults live in `src/cli/config.ts`. Supported config keys are `port`, `skipSizeCheck`, `maxFileSize`, `watch`, `httpsOnly`, `open`, `browser`, and `theme`.
+Built-in defaults and value parsers live in `src/cli/config.ts`. See the [README option table](README.md#cli-options) for supported flags, config keys, and defaults.
 
 Config precedence is:
 
@@ -66,6 +67,8 @@ Config precedence is:
 `pvmd --help` intentionally shows effective defaults after local config is applied. `pvmd --help --no-local-config` shows the built-in defaults. Explicit CLI flags still override configured defaults, including when help is rendered.
 
 Each CLI option may be provided at most once, and the command accepts exactly one markdown file path. Keep tests in `src/cli/tests/` aligned with any CLI parsing, help text, config, or validation changes.
+
+When adding a setting, update the `Config` interface and defaults, the option entry in `src/cli/options.ts`, and the key allowlist and parsing in `src/cli/local-config.ts`. Set the option's `configKey` so an explicit CLI flag takes precedence over user config. Both size options use the shared finite-positive-number parser.
 
 ## Markdown Rendering
 
@@ -87,7 +90,7 @@ The server derives the browser watch state from whether an SSE handler exists. I
 
 ## Large Files
 
-File size validation uses `config.maxFileSize`, which defaults to 512 KB and can be changed with `--max-size` or skipped with `--no-size-check`.
+Markdown size validation uses `config.maxFileSize`, which defaults to 512 KB and can be changed with `--max-size` or skipped with `--no-size-check`. These settings do not affect local images.
 
 Watch behavior is intentionally stricter. Files larger than the built-in default max size disable watching even if validation is skipped or raised. This keeps large previews possible while avoiding repeated expensive reprocessing during edits. When that happens, `pvmd` prints a startup notice explaining that watch is disabled and the first browser render may take longer, especially in Safari.
 
@@ -113,11 +116,17 @@ The server binds to `127.0.0.1` only. It serves:
 
 - `/` for the rendered preview page.
 - `/events` for Server-Sent Events when watch is enabled.
-- Image files referenced by markdown, scoped to the markdown file directory.
+- Image files referenced by Markdown or HTML `<img>` tags, scoped to the Markdown file directory, when `config.localFiles` is enabled.
 
 Static file serving is intentionally narrow. Paths are decoded, normalized relative to the markdown directory, protected against traversal, and limited to supported image extensions. SVG responses receive a restrictive CSP.
 
-Server responses include defensive headers such as CSP, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, and `Permissions-Policy`. The app script gets a per-response nonce; markdown-provided scripts are not allowed to run.
+`config.localFiles` defaults to `true`. `--no-local-files` or `"localFiles": false` disables only the static-file route, returning `404` for local images while leaving `/` and `/events` available. Remote images are unaffected. Video and other file types are not served.
+
+Images use `config.maxImageSize` (default: 20480 KB, or 20 MiB), independently of Markdown limits and `skipSizeCheck`. File validation raises `FileTooLargeError`. The static-file resolver converts it to `ImageTooLargeError`, which the server handles with HTTP `413 Content Too Large` and a terminal message containing the filename, effective limit, and remedy. Other static-file failures return `404`.
+
+When changing static-file behavior, cover the resolver in `src/utils/tests/static-file.test.ts` and HTTP behavior in `src/tests/server.test.ts`. Include disabled serving, custom size limits, and unchanged preview and SSE routes where relevant.
+
+Server responses include defensive headers such as CSP, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, and `Permissions-Policy`. The app script gets a per-response nonce. Markdown-provided scripts are not allowed to run.
 
 ## Build Outputs
 
@@ -138,7 +147,7 @@ Key protections include:
 
 - Local-only HTTP serving on `127.0.0.1`.
 - Markdown path validation before startup and during watcher recovery.
-- Rejection of directories, symbolic links, unsupported extensions, missing files, and oversized files unless size validation is explicitly skipped.
+- Rejection of directories, symbolic links, unsupported extensions, and missing files. Markdown size validation can be skipped. Images always enforce their separately configured size limit.
 - Server-side sanitization that strips active HTML content, inline event handlers, and unsafe URL schemes.
 - Optional `--https-only` mode for stricter remote links and images.
 - Restrictive response headers and script nonce injection.

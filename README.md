@@ -1,12 +1,14 @@
 # pvmd
 
-`pvmd` is a terminal-first Markdown previewer for local files that turns a Markdown document into a polished local preview from a single command. It serves your file on `127.0.0.1` in a GitHub-style view, keeps the workflow straightforward, and stays responsive as you edit so you can review, refine, and publish Markdown with less friction.
+`pvmd` is a command-line tool that previews local Markdown files in your browser with GitHub-style rendering. Run it from your terminal, then edit in your usual editor and see the preview update as you save.
 
 ## Table of Contents
 
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
+  - [Large Files](#large-files)
+  - [Local Images](#local-images)
 - [CLI Options](#cli-options)
 - [Local Config](#local-config)
 - [Security](#security)
@@ -14,15 +16,15 @@
 
 ## Features
 
-- Local Markdown preview in the browser from a single terminal command
-- GitHub-style Markdown rendering for README, docs, and contribution guide reviews before publishing changes
-- Incremental live updates with block-level DOM patching instead of full-page replacement
-- Multi-client update delivery over Server-Sent Events
-- GitHub-style Markdown rendering with syntax highlighting, alerts, footnotes, heading anchors, emoji, and KaTeX
-- Copy buttons for fenced code blocks and local static image serving for Markdown content
-- Optional browser auto-open, browser selection, and `--https-only` filtering for remote links and images
-- Large-file preview safeguards that disable watching automatically when live updates would be too costly
-- Strict file validation, path traversal protection, and user-friendly error handling
+- GitHub-style rendering with syntax highlighting, alerts, footnotes, emoji, and math
+- Live preview updates as you save, without full-page reloads
+- Synchronized previews across multiple browser tabs
+- Code-block copy buttons and heading links
+- Local images in Markdown and HTML
+- Light, dark, and accessibility-focused themes
+- Optional browser auto-open and browser selection
+- Configurable file-size limits and local image controls
+- HTML sanitization and optional HTTPS-only links and images
 
 ## Installation
 
@@ -42,78 +44,31 @@ npx @andrejcode/pvmd ./README.md
 pvmd [options] <file>
 ```
 
-Typical workflow: preview a Markdown file locally, iterate quickly, and optionally verify how it will look in a GitHub-style view before publishing changes.
-
 Preview a Markdown file:
 
 ```bash
 pvmd ./docs/guide.md
 ```
 
-Open the preview automatically in your browser:
+Open automatically in a specific browser and choose a theme:
 
 ```bash
-pvmd --open ./docs/guide.md
-```
-
-When the preview starts, `pvmd` prints a local address such as `Preview ready at http://127.0.0.1:8765/` so you can always open it manually if auto-open is unavailable.
-
-Open the preview in a specific supported browser:
-
-```bash
-pvmd --open --browser chrome ./docs/guide.md
-```
-
-Short flag form:
-
-```bash
-pvmd -o -b firefox ./docs/guide.md
-```
-
-Preview with stricter remote-content handling:
-
-```bash
-pvmd --open --https-only ./docs/guide.md
-```
-
-Preview with a specific GitHub Markdown theme:
-
-```bash
-pvmd --theme dark-dimmed ./docs/guide.md
-```
-
-Short flag form:
-
-```bash
-pvmd -t light-colorblind ./docs/guide.md
-```
-
-Disable file watching:
-
-```bash
-pvmd --no-watch ./docs/guide.md
-```
-
-Use a local config file for project defaults:
-
-```json
-{
-  "open": true,
-  "browser": "firefox",
-  "theme": "dark-dimmed",
-  "port": 9000
-}
+pvmd -o -b firefox -t dark-dimmed ./docs/guide.md
 ```
 
 `pvmd` prints a local preview address such as `http://127.0.0.1:8765/` when it starts. If browser auto-open is unavailable or disabled, open that address manually.
 
-For Markdown files larger than the built-in default max size of 512 KB, `pvmd` automatically disables file watching for that preview. You can still preview larger files with `--no-size-check` or by raising `--max-size`, but live updates are skipped to avoid expensive reprocessing while editing. The first browser render can also take longer for large documents, especially in Safari, because the browser still has to lay out the full rendered document.
+### Large Files
+
+Use `--max-size <kb>` or `--no-size-check` to preview Markdown above the default limit. Files over 512 KB always have live updates disabled and may take longer to render, even if the size limit is raised or skipped.
+
+### Local Images
 
 Local images work in both Markdown image syntax and HTML `<img>` tags. Paths such as `./screenshots/example.png` are relative to the Markdown file's folder and must stay within that folder. Supported formats are AVIF, GIF, ICO, JPEG, PNG, SVG, and WebP.
 
-Local file serving is enabled by default. Disable it with `pvmd README.md --no-local-files` or set `"localFiles": false` in config. Local image requests then return HTTP `404`; the Markdown preview, live updates, and remote images are unaffected.
+Disable local image serving with `--no-local-files` or `"localFiles": false` in config. Local image requests then return HTTP `404`. The Markdown preview, live updates, and remote images are unaffected.
 
-Images have a separate default limit of 20 MiB (20480 KB) per file. Customize it with `--max-image-size <kb>` or the `maxImageSize` config key. Neither `--max-size` nor `--no-size-check` affects images. Oversized images return HTTP `413 Content Too Large`, and the terminal prints the filename, limit, and guidance to resize, compress, or raise the limit.
+Images have a separate per-file limit, independent of `--max-size` and `--no-size-check`. Oversized images return HTTP `413 Content Too Large`, and the terminal prints the filename, effective limit, and remedy.
 
 For example, allow local images up to 40 MiB:
 
@@ -123,29 +78,29 @@ pvmd README.md --max-image-size 40960
 
 ## CLI Options
 
-The built-in defaults below are the fallback values when no local config is present. `pvmd --help` shows the effective defaults after applying `~/.pvmd/config.json`, and help with `--no-local-config` shows the built-in defaults directly regardless of flag order. Explicit CLI flags still take precedence.
+The table lists built-in settings. `pvmd --help` shows effective defaults after config and CLI overrides. Add `--no-local-config` to ignore the config file.
 
-```text
--p, --port <port>       Port number (default: 8765; use 0 for a random port)
---no-size-check         Skip Markdown file size validation
---no-local-config       Ignore ~/.pvmd/config.json and use built-in defaults as the baseline
---max-size <kb>         Maximum Markdown file size in KB (default: 512)
---max-image-size <kb>   Maximum local image size in KB (default: 20480)
---no-local-files        Disable local file serving
---no-watch              Skip file watching
---https-only            Only allow HTTPS URLs for images and links
--o, --open              Open in default browser automatically
--b, --browser <browser> Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: default)
--t, --theme <theme>     GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: default)
--h, --help              Show help
--v, --version           Show version
-```
+| Option                    | Config Key      | Built-In Default | Purpose                                                        |
+| ------------------------- | --------------- | ---------------- | -------------------------------------------------------------- |
+| `-p, --port <port>`       | `port`          | `8765`           | Server port. Use `0` to pick an available port.                |
+| `--max-size <kb>`         | `maxFileSize`   | `512`            | Maximum Markdown file size in KB.                              |
+| `--no-size-check`         | `skipSizeCheck` | `false`          | Skip Markdown size validation.                                 |
+| `--max-image-size <kb>`   | `maxImageSize`  | `20480` (20 MiB) | Maximum local image size in KB.                                |
+| `--no-local-files`        | `localFiles`    | `true`           | Disable local file serving by setting `localFiles` to `false`. |
+| `--no-watch`              | `watch`         | `true`           | Disable live updates by setting `watch` to `false`.            |
+| `--https-only`            | `httpsOnly`     | `false`          | Restrict remote links and images to HTTPS.                     |
+| `-o, --open`              | `open`          | `false`          | Open the preview in the selected browser.                      |
+| `-b, --browser <browser>` | `browser`       | `default`        | Browser used by `--open`.                                      |
+| `-t, --theme <theme>`     | `theme`         | `default`        | GitHub Markdown theme.                                         |
+| `--no-local-config`       | -               | -                | Ignore the user config file.                                   |
+| `-h, --help`              | -               | -                | Show help.                                                     |
+| `-v, --version`           | -               | -                | Show version.                                                  |
+
+Size values must be finite positive numbers. Each option may be provided once, and the command accepts exactly one Markdown file path.
 
 Supported browser values: `default`, `chrome`, `firefox`, `edge`, `brave`.
 
 Supported theme values: `default`, `light`, `dark`, `dark-dimmed`, `dark-high-contrast`, `dark-colorblind`, `light-colorblind`.
-
-Each CLI option may be provided at most once per command, and `pvmd` accepts exactly one Markdown file path.
 
 If you omit `--theme`, `pvmd` uses the package default stylesheet, which switches automatically between GitHub's light and dark variants based on the system `prefers-color-scheme` setting.
 
@@ -153,35 +108,23 @@ If you choose a named browser such as `brave` or `chrome`, `pvmd` checks that it
 
 ## Local Config
 
-`pvmd` supports a global `.pvmd/config.json` file in your home directory so you do not need to repeat common flags.
-
-The CLI looks for `.pvmd/config.json` in your OS user home directory
+Set user-wide defaults in:
 
 - Linux and macOS: `~/.pvmd/config.json`
 - Windows: `%USERPROFILE%\.pvmd\config.json`
 
-There is only one shared config location for the current user. Those config values override the built-in defaults, and explicit CLI flags override the config.
-
-If you want one run to ignore that file completely and start from the built-in defaults, pass `--no-local-config`.
-
-Supported config keys are: `port`, `skipSizeCheck`, `maxFileSize`, `maxImageSize`, `localFiles`, `watch`, `httpsOnly`, `open`, `browser`, and `theme`. Both size settings use KB and must be finite positive numbers. `skipSizeCheck` applies only to Markdown files. `localFiles` is a boolean and defaults to `true`.
-
-Example:
+Use the config keys in the table above. CLI flags override config, and config overrides built-in defaults. For example:
 
 ```json
 {
   "open": true,
   "browser": "chrome",
   "theme": "dark",
-  "port": 9000,
-  "maxImageSize": 40960,
-  "localFiles": true,
-  "watch": true,
-  "httpsOnly": false
+  "maxImageSize": 40960
 }
 ```
 
-Save that as `~/.pvmd/config.json`. Running `pvmd README.md` then uses those values automatically, while a command such as `pvmd README.md --port 8765 --theme light` still overrides the configured defaults. If you want to ignore the home config for a run, use `pvmd README.md --no-local-config`.
+Running `pvmd README.md` uses these settings. `pvmd README.md --theme light` overrides only the theme. Invalid JSON or settings produce warnings and are ignored.
 
 ## Security
 
