@@ -33,11 +33,12 @@ npm run format:check   # check Prettier formatting
 
 ## Source Layout
 
-- `src/index.ts` is the CLI entry point. It parses arguments and calls `run()`.
+- `src/index.ts` is the entry point. It parses arguments and selects file previews or the private Neovim runtime.
 - `src/cli/` owns CLI options, default config, local config loading, supported browser names, supported themes, and value parsing.
 - `src/app.ts` is the runtime coordinator. It resolves and validates the markdown path, decides whether watch is enabled, creates the watcher, creates the server, and installs shutdown cleanup.
 - `src/markdown/` owns file validation, markdown parsing, rendering, syntax highlighting, render caches, sanitization, block IDs, and full HTML assembly for rendered markdown blocks.
 - `src/watcher/` owns `fs.watch`, debounce/recovery behavior, block diffing, and Server-Sent Event payload creation.
+- `src/nvim/` owns the bounded Neovim stdin protocol, revision validation, in-memory document state, and preview-session lifecycle. It reuses `src/watcher/live-preview.ts` for SSE broadcasting.
 - `src/server.ts` owns the local HTTP server, response headers, CSP nonce injection, body data attributes, `/events`, static image serving, browser auto-open, and startup errors.
 - `src/client/` is the browser app. It connects to live updates, applies full or patch updates, preserves `<details>` state, adds copy buttons, disables rendered form controls, opens external links in new tabs, and shows the disconnected alert.
 - `src/shared/` contains types and constants shared by the Node app and browser client.
@@ -66,7 +67,7 @@ Config precedence is:
 
 `pvmd --help` intentionally shows effective defaults after local config is applied. `pvmd --help --no-local-config` shows the built-in defaults. Explicit CLI flags still override configured defaults, including when help is rendered.
 
-Each CLI option may be provided at most once, and the command accepts exactly one markdown file path. Keep tests in `src/cli/tests/` aligned with any CLI parsing, help text, config, or validation changes.
+Each CLI option may be provided at most once, and ordinary CLI usage accepts exactly one markdown file path. The Neovim plugin manages its connection privately and provides buffer metadata through stdin. There is no integration flag or local-config setting. Keep tests in `src/cli/tests/` aligned with any CLI parsing, help text, config, or validation changes.
 
 When adding a setting, update the `Config` interface and defaults, the option entry in `src/cli/options.ts`, and the key allowlist and parsing in `src/cli/local-config.ts`. Set the option's `configKey` so an explicit CLI flag takes precedence over user config. Both size options use the shared finite-positive-number parser.
 
@@ -87,6 +88,16 @@ The watcher reads the markdown file after changes, renders the next block list, 
 The first update for a connected browser may be a full HTML payload. Later updates can be patch payloads that remove or insert block wrappers. The browser applies those patches in `src/client/markdown-content-updater.ts` and reruns enhancements only on inserted blocks.
 
 The server derives the browser watch state from whether an SSE handler exists. If no watcher exists, `/events` is not registered and the rendered page gets `data-watch="false"`, so the browser does not open an `EventSource`.
+
+The Neovim runtime supplies an SSE handler without a filesystem watcher. Each initialization or update renders an in-memory Markdown snapshot. Every new SSE connection receives a full snapshot, avoiding races between page loading and subscription, then shares subsequent block patches. Test protocol parsing and actual HTTP/SSE behavior in `src/nvim/tests/`.
+
+## Neovim Connection
+
+The `pvmd-nvim` plugin requires pvmd v0.4.0 or newer. It sets `PVMD_NVIM=1` only in its child process environment to select the private runtime. This is an internal integration detail, not a public CLI option or an authentication mechanism. User-facing documentation should direct users to `:PvmdStart`, not to invoking the connection manually.
+
+The plugin sends newline-delimited JSON over stdin. An `init` message provides protocol version `1`, a positive safe-integer `revision`, Markdown `content`, and optional `path` and `baseDir` metadata. The document path does not need to exist. After the `ready` response, `update` messages provide increasing revisions and complete buffer snapshots. Stdout contains `ready`, `applied`, or `error` messages, and diagnostics go to stderr. `applied` acknowledges server rendering, not browser receipt. Stale updates are ignored and acknowledged with `stale: true`.
+
+Each message must end with a newline and is limited to 16 MiB, independently of the configured Markdown byte-size limit. Malformed or oversized frames are rejected without losing the next complete message. Initialization is allowed once per process, and closing stdin shuts down the server and SSE clients. Unlike file watching, Neovim updates remain enabled when the Markdown size limit is raised above 512 KB.
 
 ## Large Files
 

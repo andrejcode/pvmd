@@ -12,6 +12,7 @@
 - [CLI Options](#cli-options)
 - [Local Config](#local-config)
 - [Security](#security)
+- [Neovim Integration](#neovim-integration)
 - [License](#license)
 
 ## Features
@@ -96,7 +97,7 @@ The table lists built-in settings. `pvmd --help` shows effective defaults after 
 | `-h, --help`              | -               | -                | Show help.                                                     |
 | `-v, --version`           | -               | -                | Show version.                                                  |
 
-Size values must be finite positive numbers. Each option may be provided once, and the command accepts exactly one Markdown file path.
+Size values must be finite positive numbers. Each option may be provided once, and the CLI accepts exactly one Markdown file path.
 
 Supported browser values: `default`, `chrome`, `firefox`, `edge`, `brave`.
 
@@ -131,6 +132,10 @@ Running `pvmd README.md` uses these settings. `pvmd README.md --theme light` ove
 `pvmd` is designed to improve preview safety without stripping away useful GitHub-style Markdown features. It combines server-side sanitization, restrictive response headers, controlled local file serving, and optional `--https-only` filtering to reduce risk while keeping the preview feature-rich.
 
 You should still preview only Markdown that you trust. Even with the available safeguards, review the source of any Markdown file before opening it, especially if it comes from an external or unverified source.
+
+## Neovim Integration
+
+The companion [pvmd-nvim](https://github.com/andrejcode/pvmd-nvim) plugin brings live Markdown previews to Neovim.
 
 ## License
 

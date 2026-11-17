@@ -1,22 +1,19 @@
 import { watch, type FSWatcher } from 'node:fs'
-import type { IncomingMessage, ServerResponse } from 'node:http'
 import {
   readMarkdownFile,
   renderMarkdownBlocks,
   validateMarkdownPath,
 } from '@/markdown'
-import type { LiveUpdateBlock } from '@/shared/live-update'
 import { exitWithError } from '@/utils/fatal-error'
-import { createLiveUpdateMessage } from './patch-diff'
+import { createLivePreview } from './live-preview'
 
 export default function createWatcher(path: string, httpsOnly = false) {
   const debounceMs = 200
   const renameRetryDelayMs = 50
   const renameRetryLimit = 10
-  const clients = new Set<ServerResponse>()
+  const preview = createLivePreview()
   let reloadTimer: ReturnType<typeof setTimeout> | null = null
   let renameRetryTimer: ReturnType<typeof setTimeout> | null = null
-  let previousBlocks: LiveUpdateBlock[] | null = null
   let watcher: FSWatcher | null = null
   let isClosed = false
 
@@ -44,11 +41,7 @@ export default function createWatcher(path: string, httpsOnly = false) {
   }
 
   function closeClients() {
-    for (const client of clients) {
-      if (!client.writableEnded) {
-        client.end()
-      }
-    }
+    preview.cleanup()
   }
 
   function exitOnWatcherError(error: unknown): never {
@@ -62,35 +55,21 @@ export default function createWatcher(path: string, httpsOnly = false) {
   }
 
   function broadcastUpdate() {
-    if (clients.size === 0) {
+    if (!preview.hasClients()) {
       return
     }
 
     try {
       const content = readMarkdownFile(path)
       const nextBlocks = renderMarkdownBlocks(content, httpsOnly)
-      const message = createLiveUpdateMessage(previousBlocks, nextBlocks)
-
-      previousBlocks = nextBlocks
-
-      if (!message) {
-        return
-      }
-
-      const data = `data: ${JSON.stringify(message)}\n\n`
-
-      for (const client of clients) {
-        if (!client.writableEnded) {
-          client.write(data)
-        }
-      }
+      preview.update(nextBlocks)
     } catch (error) {
       exitOnWatcherError(error)
     }
   }
 
   function scheduleReload() {
-    if (clients.size === 0) {
+    if (!preview.hasClients()) {
       return
     }
 
@@ -141,31 +120,16 @@ export default function createWatcher(path: string, httpsOnly = false) {
     scheduleReload()
   }
 
-  function handleSSE(_req: IncomingMessage, res: ServerResponse) {
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    })
-
-    clients.add(res)
-
-    res.on('close', () => {
-      clients.delete(res)
-    })
-  }
-
   attachWatcher()
 
   return {
-    handleSSE,
+    handleSSE: preview.handleSSE,
     cleanup: () => {
       cancelScheduledReload()
       cancelRenameRetry()
       isClosed = true
       closeWatcher()
       closeClients()
-      clients.clear()
     },
   }
 }

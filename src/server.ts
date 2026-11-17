@@ -165,7 +165,7 @@ export function createServer(
   })
 }
 
-export function startServer(server: Server) {
+export function startServer(server: Server, onReady?: (url: string) => void) {
   server.on('error', (error: NodeJS.ErrnoException) => {
     if (error.code === 'EADDRINUSE') {
       exitWithError(
@@ -196,7 +196,11 @@ export function startServer(server: Server) {
     }
 
     const url = `http://127.0.0.1:${address.port}/`
-    console.log(`Preview ready at ${url}`)
+    if (onReady) {
+      onReady(url)
+    } else {
+      console.log(`Preview ready at ${url}`)
+    }
 
     if (config.open) {
       void (openPreviewInBrowser as (url: string) => Promise<void>)(url)

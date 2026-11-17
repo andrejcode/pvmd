@@ -4,6 +4,24 @@ import { parseArguments } from '../index'
 import { fileSystem, osPaths } from '../local-config'
 
 describe('parseArguments', () => {
+  test('accepts a private Neovim launch without a file path', () => {
+    expect(parseArguments(['--port', '0'], true)).toBe('')
+    expect(config.port).toBe(0)
+  })
+
+  test('rejects a positional file in a Neovim launch', () => {
+    expect(() => parseArguments(['README.md'], true)).toThrow(
+      'Neovim provides the document path',
+    )
+  })
+
+  test.each(['--editor', '--nvim'])(
+    'rejects public integration flags: %s',
+    (flag) => {
+      expect(() => parseArguments([flag])).toThrow(`Unknown option: ${flag}`)
+    },
+  )
+
   const originalExistsSync = fileSystem.existsSync
   const originalReadFileSync = fileSystem.readFileSync
   const originalHomedir = osPaths.homedir
@@ -48,6 +66,9 @@ describe('parseArguments', () => {
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Usage: pvmd [options] <file>'),
       )
+      const output = consoleLogSpy.mock.calls.flat().join('\n')
+      expect(output).not.toContain('--editor')
+      expect(output).not.toContain('--nvim')
 
       consoleLogSpy.mockClear()
 

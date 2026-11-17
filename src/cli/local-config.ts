@@ -27,8 +27,8 @@ const CONFIG_KEYS = [
   'theme',
 ] satisfies Array<keyof Config>
 
-function isConfigKey(value: string): value is keyof Config {
-  return CONFIG_KEYS.includes(value as keyof Config)
+function isConfigKey(value: string): value is (typeof CONFIG_KEYS)[number] {
+  return CONFIG_KEYS.includes(value as (typeof CONFIG_KEYS)[number])
 }
 
 export const fileSystem = {

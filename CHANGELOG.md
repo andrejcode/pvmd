@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased (0.4.0)
+
+### Added
+
+- Added unsaved Neovim Markdown previews through the companion `pvmd-nvim` plugin and its `:PvmdStart`, `:PvmdStop`, and `:PvmdToggle` commands. The plugin manages the preview connection privately, without a user-facing CLI flag.
+- Added full current snapshots for new and reconnecting Neovim-preview browser connections, followed by the existing incremental block patches.
+- Added byte-limited input framing, revision checks, support for unnamed and not-yet-saved documents, and shutdown when Neovim's preview connection closes.
+
+### Changed
+
+- Extracted a shared SSE preview controller so filesystem watching and Neovim buffers reuse the same live-update pipeline.
+
 ## 0.3.1 - 2026-10-22
 
 ### Added

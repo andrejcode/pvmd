@@ -100,7 +100,7 @@ function applyScheduledAssignments(state: ParseState, suppressErrors: boolean) {
   }
 }
 
-export function parseArguments(args: string[]) {
+export function parseArguments(args: string[], nvim = false) {
   const state = createParseState()
 
   for (let i = 0; i < args.length; i++) {
@@ -201,6 +201,15 @@ export function parseArguments(args: string[]) {
   }
 
   applyScheduledAssignments(state, false)
+
+  if (nvim) {
+    if (state.userPath) {
+      throw new Error(
+        'Neovim provides the document path through the preview connection',
+      )
+    }
+    return ''
+  }
 
   if (!state.userPath) {
     throw new Error('Please provide a markdown file path as an argument')
