@@ -34,10 +34,14 @@ export async function assembleHTML(result, outdir) {
   )
 
   let output = html
-  output = output.replace('<!-- STYLE_OUTLET -->', `<style>${css}</style>`)
+  // Use replacer functions so "$"-patterns in the bundles are inserted literally.
+  output = output.replace(
+    '<!-- STYLE_OUTLET -->',
+    () => `<style>${css}</style>`,
+  )
   output = output.replace(
     '<!-- SCRIPT_OUTLET -->',
-    `<script data-pvmd-app>${js}</script>`,
+    () => `<script data-pvmd-app>${js}</script>`,
   )
   output = output.replace(
     /href="favicon\/light-favicon\.svg"/,

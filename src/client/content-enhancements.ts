@@ -1,4 +1,5 @@
 import { createCopyIcon, renderIcons } from './icons'
+import { renderMermaidDiagrams } from './mermaid-diagrams'
 
 function hasCopyButton(pre: HTMLElement) {
   return Array.from(pre.children).some((child) => {
@@ -75,4 +76,5 @@ export function applyContentEnhancements(root: HTMLElement) {
   addCopyButtons(root)
   disableInteractiveContent(root)
   openExternalLinksInNewTab(root)
+  renderMermaidDiagrams(root)
 }

@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Added Mermaid diagram support: fenced code blocks tagged `mermaid` render as diagrams in the preview, match the light or dark page theme, update live, and fall back to the diagram source when the definition is invalid. Rendering happens locally without remote assets.
 - Added unsaved Neovim Markdown previews through the companion `pvmd-nvim` plugin and its `:PvmdStart`, `:PvmdStop`, and `:PvmdToggle` commands. The plugin manages the preview connection privately, without a user-facing CLI flag.
 - Added full current snapshots for new and reconnecting Neovim-preview browser connections, followed by the existing incremental block patches.
 - Added byte-limited input framing, revision checks, support for unnamed and not-yet-saved documents, and shutdown when Neovim's preview connection closes.

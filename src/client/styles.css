@@ -43,6 +43,12 @@ body {
   min-width: 0;
 }
 
+.markdown-body pre.mermaid {
+  display: flex;
+  justify-content: center;
+  background-color: transparent;
+}
+
 .copy-button {
   position: absolute;
   top: 8px;

@@ -265,6 +265,24 @@ describe('renderMarkdownBlocks', () => {
       const result = renderMarkdown(markdown)
       expect(result).toContain('<pre><code>indented code')
     })
+
+    test('should render mermaid code blocks as mermaid containers', () => {
+      const markdown = '```mermaid\ngraph TD\n  A-->B\n```'
+      const result = renderMarkdown(markdown)
+      expect(result).toContain(
+        '<pre class="mermaid">graph TD\n  A--&gt;B</pre>',
+      )
+      expect(result).not.toContain('<code')
+    })
+
+    test('should escape html inside mermaid code blocks', () => {
+      const markdown =
+        '```mermaid\nsequenceDiagram\n  A->>B: <script>alert(1)</script>\n```'
+      const result = renderMarkdown(markdown)
+      expect(result).toContain('<pre class="mermaid">')
+      expect(result).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+      expect(result).not.toContain('<script>')
+    })
   })
 
   describe('blockquotes', () => {

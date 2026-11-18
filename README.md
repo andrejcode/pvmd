@@ -18,6 +18,7 @@
 ## Features
 
 - GitHub-style rendering with syntax highlighting, alerts, footnotes, emoji, and math
+- Mermaid diagrams rendered from ` ```mermaid ` code blocks, fully offline
 - Live preview updates as you save, without full-page reloads
 - Synchronized previews across multiple browser tabs
 - Code-block copy buttons and heading links

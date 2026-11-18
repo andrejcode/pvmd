@@ -79,6 +79,17 @@ marked.use(
     },
   }),
   gfmHeadingId(),
+  {
+    renderer: {
+      code({ text, lang }) {
+        if (!isMermaidLanguage(lang)) {
+          return false
+        }
+
+        return `<pre class="mermaid">${escapeHtmlText(text)}</pre>\n`
+      },
+    },
+  },
 )
 
 type MarkdownToken = ReturnType<typeof marked.lexer>[number]
@@ -250,7 +261,23 @@ function getRenderCacheKey(
   return `${mode}\x00${JSON.stringify(tokenGroup)}`
 }
 
+function isMermaidLanguage(lang: string | undefined): boolean {
+  return (lang ?? '').trim().split(/\s+/, 1)[0]?.toLowerCase() === 'mermaid'
+}
+
+function escapeHtmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
 function highlightCode(code: string, lang: string): string {
+  if (isMermaidLanguage(lang)) {
+    // Mermaid blocks are rendered client-side from their raw source.
+    return code
+  }
+
   const key = `${lang}\x00${code}`
   const cached = highlightCache.get(key)
   if (cached !== undefined) return cached
