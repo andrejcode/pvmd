@@ -24,6 +24,7 @@ export default defineConfig({
           name: 'client',
           globals: true,
           environment: 'jsdom',
+          css: { include: [/github-markdown-css/] },
           include: ['src/client/**/*.test.ts'],
         },
       },

@@ -1,12 +1,8 @@
 import { applyContentEnhancements } from '../content-enhancements'
+import { renderMermaidDiagrams } from '../mermaid-diagrams'
 
-const { initializeMock, runMock } = vi.hoisted(() => ({
-  initializeMock: vi.fn(),
-  runMock: vi.fn(() => Promise.resolve()),
-}))
-
-vi.mock('mermaid', () => ({
-  default: { initialize: initializeMock, run: runMock },
+vi.mock('../mermaid-diagrams', () => ({
+  renderMermaidDiagrams: vi.fn(),
 }))
 
 describe('content enhancements', () => {
@@ -163,34 +159,12 @@ describe('content enhancements', () => {
     }
   })
 
-  test('renders mermaid blocks with mermaid and skips copy buttons', async () => {
+  test('enhances mermaid blocks without adding copy buttons', () => {
     const root = markdownContent()
     root.innerHTML = '<pre class="mermaid">graph TD\n  A--&gt;B</pre>'
-    const diagram = root.querySelector<HTMLElement>('pre.mermaid')
-
     applyContentEnhancements(root)
 
-    await vi.waitFor(() => {
-      expect(runMock).toHaveBeenCalledWith({
-        nodes: [diagram],
-        suppressErrors: true,
-      })
-    })
-    expect(initializeMock).toHaveBeenCalledWith(
-      expect.objectContaining({ startOnLoad: false }),
-    )
+    expect(renderMermaidDiagrams).toHaveBeenCalledWith(root)
     expect(document.querySelectorAll('.copy-button')).toHaveLength(0)
-  })
-
-  test('does not re-render already processed mermaid blocks', async () => {
-    const root = markdownContent()
-    root.innerHTML =
-      '<pre class="mermaid" data-processed="true">graph TD</pre><pre><code>x</code></pre>'
-    runMock.mockClear()
-
-    applyContentEnhancements(root)
-
-    await Promise.resolve()
-    expect(runMock).not.toHaveBeenCalled()
   })
 })

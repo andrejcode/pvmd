@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Changed
+
+- Mermaid diagrams now use the active Markdown theme's colors and font, including dimmed, high-contrast, and colorblind themes.
+
+### Fixed
+
+- Mermaid diagrams now update automatically when the system light/dark preference changes, without refreshing the page. Explicitly selected themes remain unchanged.
+
 ## 0.4.0 - 2026-11-18
 
 ### Added
