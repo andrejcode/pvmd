@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Mermaid live edits and theme changes keep the previous diagram visible until the latest replacement is ready, avoiding temporary layout collapse. Invalid edits retain the last valid diagram with a styled, explicitly pvmd-labelled error notice.
 - Mermaid diagrams now update automatically when the system light/dark preference changes, without refreshing the page. Explicitly selected themes remain unchanged.
 
 ## 0.4.0 - 2026-11-18

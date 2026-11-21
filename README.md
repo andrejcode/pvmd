@@ -19,6 +19,7 @@
 
 - GitHub-style rendering with syntax highlighting, alerts, footnotes, emoji, and math
 - Mermaid diagrams rendered from ` ```mermaid ` code blocks, fully offline, styled to match every theme and updated automatically on system light/dark changes
+- Mermaid live edits keep the last valid diagram visible while rendering; invalid syntax shows an error indicator without clearing the previous diagram
 - Live preview updates as you save, without full-page reloads
 - Synchronized previews across multiple browser tabs
 - Code-block copy buttons and heading links

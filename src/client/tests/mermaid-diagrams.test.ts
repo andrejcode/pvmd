@@ -26,6 +26,7 @@ const themeStyles: Record<string, string> = {
 describe('mermaid diagrams', () => {
   let stylesheet: HTMLStyleElement
   let preference: EventTarget
+  let renderedSources: string[]
 
   function setTheme(theme: string) {
     const css = themeStyles[theme]
@@ -41,12 +42,32 @@ describe('mermaid diagrams', () => {
     return node
   }
 
+  function block(id: string, label: string) {
+    return `<div data-pvmd-block-id="${id}"><pre class="mermaid">graph TD\n  A[${label}]</pre></div>`
+  }
+
+  async function createUpdater() {
+    const { renderMermaidDiagrams } = await import('../mermaid-diagrams')
+    const { createMarkdownContentUpdater } =
+      await import('../markdown-content-updater')
+    const root = document.createElement('main')
+    document.body.appendChild(root)
+    return {
+      root,
+      updater: createMarkdownContentUpdater(root, {
+        applyEnhancements: renderMermaidDiagrams,
+      }),
+    }
+  }
+
   beforeEach(() => {
     vi.resetModules()
     initializeMock.mockReset()
     runMock.mockReset()
+    renderedSources = []
     runMock.mockImplementation(({ nodes }) => {
       for (const node of nodes) {
+        renderedSources.push(node.textContent ?? '')
         node.setAttribute('data-processed', 'true')
         node.innerHTML = '<svg><text>Rendered diagram</text></svg>'
       }
@@ -119,18 +140,6 @@ describe('mermaid diagrams', () => {
     await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(2))
     expect(initializeMock).toHaveBeenCalledTimes(1)
 
-    runMock.mockImplementation(({ nodes }) => {
-      expect(nodes[0]?.hasAttribute('data-processed')).toBe(false)
-      expect(nodes[0]?.textContent).toBe(
-        nodes[0] === first
-          ? 'graph TD\n  A-->B'
-          : 'sequenceDiagram\n  Alice->>Bob: Hello',
-      )
-      nodes[0]!.setAttribute('data-processed', 'true')
-      nodes[0]!.innerHTML = '<svg></svg>'
-      return Promise.resolve()
-    })
-
     setTheme('dark')
     preference.dispatchEvent(new Event('change'))
     await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(4))
@@ -142,12 +151,20 @@ describe('mermaid diagrams', () => {
     preference.dispatchEvent(new Event('change'))
     await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(6))
     expect(initializeMock).toHaveBeenCalledTimes(3)
+    expect(renderedSources).toEqual([
+      'graph TD\n  A-->B',
+      'sequenceDiagram\n  Alice->>Bob: Hello',
+      'graph TD\n  A-->B',
+      'sequenceDiagram\n  Alice->>Bob: Hello',
+      'graph TD\n  A-->B',
+      'sequenceDiagram\n  Alice->>Bob: Hello',
+    ])
   })
 
   test('keeps fixed themes unchanged and skips detached or already processed diagrams', async () => {
     setTheme('dark-dimmed')
-    const node = addDiagram()
-    const detached = addDiagram()
+    const node = addDiagram('graph TD\n  A-->B')
+    const detached = addDiagram('graph TD\n  Detached-->B')
     const processed = addDiagram()
     processed.setAttribute('data-processed', 'true')
     const { renderMermaidDiagrams } = await import('../mermaid-diagrams')
@@ -158,13 +175,15 @@ describe('mermaid diagrams', () => {
     preference.dispatchEvent(new Event('change'))
     renderMermaidDiagrams(document.body)
     // Queue a new diagram so completion also verifies the preceding no-op tasks.
-    const added = addDiagram()
+    const added = addDiagram('graph TD\n  Added-->B')
     renderMermaidDiagrams(document.body)
     await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(2))
-    expect(runMock.mock.calls.map(([options]) => options.nodes)).toEqual([
-      [node],
-      [added],
+    expect(renderedSources).toEqual([
+      'graph TD\n  A-->B',
+      'graph TD\n  Added-->B',
     ])
+    expect(node.querySelector('svg')).not.toBeNull()
+    expect(added.querySelector('svg')).not.toBeNull()
     expect(initializeMock).toHaveBeenCalledTimes(1)
   })
 
@@ -172,9 +191,12 @@ describe('mermaid diagrams', () => {
     const node = addDiagram()
     let finishRender: (() => void) | undefined
     runMock.mockImplementationOnce(
-      () =>
+      ({ nodes }) =>
         new Promise<void>((resolve) => {
-          finishRender = resolve
+          finishRender = () => {
+            nodes[0]!.innerHTML = '<svg><text>Old theme</text></svg>'
+            resolve()
+          }
         }),
     )
     const { renderMermaidDiagrams } = await import('../mermaid-diagrams')
@@ -196,7 +218,231 @@ describe('mermaid diagrams', () => {
       ),
     )
     expect(initializeMock).toHaveBeenCalledTimes(2)
-    expect(node.textContent).toBe('graph TD\n  A-->B')
+    expect(node.firstChild?.textContent).toBe('graph TD\n  A-->B')
     expect(node.querySelector('svg')).toBeNull()
+    expect(node.querySelector('.mermaid-error-title')?.textContent).toBe(
+      'pvmd: Mermaid error',
+    )
+    expect(node.querySelector('.mermaid-error-description')?.textContent).toBe(
+      'Unable to render diagram.',
+    )
+  })
+
+  test.each(['patch', 'full'])(
+    'keeps the existing SVG mounted during a %s replacement',
+    async (mode) => {
+      const { root, updater } = await createUpdater()
+      updater.applyFullHtml(block('old', 'Old'))
+      await vi.waitFor(() => expect(root.querySelector('svg')).not.toBeNull())
+      const previous = root.querySelector('svg')!
+      let finish: (() => void) | undefined
+      runMock.mockImplementationOnce(
+        ({ nodes }) =>
+          new Promise<void>((resolve) => {
+            finish = () => {
+              nodes[0]!.innerHTML = '<svg><text>New diagram</text></svg>'
+              resolve()
+            }
+          }),
+      )
+
+      if (mode === 'patch') {
+        updater.applyPatch([
+          { type: 'remove', blockId: 'old' },
+          { type: 'insert', html: block('new', 'New') },
+        ])
+      } else {
+        updater.applyFullHtml(block('new', 'New'))
+      }
+
+      expect(root.querySelector('svg')).toBe(previous)
+      await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(2))
+      expect(previous.isConnected).toBe(true)
+      expect(root.querySelector('pre')?.getAttribute('aria-busy')).toBe('true')
+      const staging = document.querySelector('[data-pvmd-mermaid-staging]')
+      expect(staging?.closest('[aria-hidden="true"]')).not.toBeNull()
+      expect(root.contains(staging)).toBe(false)
+
+      finish!()
+      await vi.waitFor(() =>
+        expect(root.querySelector('svg')?.textContent).toBe('New diagram'),
+      )
+      expect(previous.isConnected).toBe(false)
+      expect(root.querySelector('pre')?.hasAttribute('aria-busy')).toBe(false)
+      expect(document.querySelector('.mermaid-render-container')).toBeNull()
+    },
+  )
+
+  test('coalesces rapid edits and never commits a superseded result', async () => {
+    const { root, updater } = await createUpdater()
+    updater.applyFullHtml(block('first', 'First'))
+    await vi.waitFor(() => expect(root.querySelector('svg')).not.toBeNull())
+    const previous = root.querySelector('svg')
+    const finishes: Array<() => void> = []
+    runMock.mockImplementation(({ nodes }) => {
+      const source = nodes[0]!.textContent ?? ''
+      renderedSources.push(source)
+      return new Promise<void>((resolve) => {
+        finishes.push(() => {
+          nodes[0]!.innerHTML = '<svg></svg>'
+          nodes[0]!.querySelector('svg')!.textContent = source
+          resolve()
+        })
+      })
+    })
+    function replace(previousId: string, id: string, label: string) {
+      updater.applyPatch([
+        { type: 'remove', blockId: previousId },
+        { type: 'insert', html: block(id, label) },
+      ])
+    }
+
+    replace('first', 'second', 'Second')
+    await vi.waitFor(() => expect(finishes).toHaveLength(1))
+    replace('second', 'third', 'Third')
+    replace('third', 'fourth', 'Fourth')
+    expect(root.querySelector('svg')).toBe(previous)
+    finishes[0]!()
+    await vi.waitFor(() => expect(finishes).toHaveLength(2))
+    expect(root.querySelector('svg')).toBe(previous)
+    expect(renderedSources).toEqual([
+      'graph TD\n  A[First]',
+      'graph TD\n  A[Second]',
+      'graph TD\n  A[Fourth]',
+    ])
+    finishes[1]!()
+    await vi.waitFor(() =>
+      expect(root.querySelector('svg')?.textContent).toBe(
+        'graph TD\n  A[Fourth]',
+      ),
+    )
+  })
+
+  test('retains the last valid SVG on invalid edits and clears the error after recovery', async () => {
+    const { root, updater } = await createUpdater()
+    updater.applyFullHtml(block('valid', 'Valid'))
+    await vi.waitFor(() => expect(root.querySelector('svg')).not.toBeNull())
+    const previous = root.querySelector('svg')
+    const error = { message: 'Syntax error' }
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    runMock.mockRejectedValueOnce(error)
+    updater.applyPatch([
+      { type: 'remove', blockId: 'valid' },
+      { type: 'insert', html: block('invalid', 'Incomplete') },
+    ])
+
+    await vi.waitFor(() =>
+      expect(root.querySelector('[role="status"]')).not.toBeNull(),
+    )
+    expect(root.querySelector('svg')).toBe(previous)
+    expect(root.querySelector('[role="status"]')?.textContent).toContain(
+      'last valid version',
+    )
+    expect(root.querySelector('[role="status"]')?.getAttribute('title')).toBe(
+      'Syntax error',
+    )
+    expect(log).toHaveBeenCalledWith('Unable to render Mermaid diagram:', error)
+
+    updater.applyPatch([
+      { type: 'remove', blockId: 'invalid' },
+      { type: 'insert', html: block('recovered', 'Recovered') },
+    ])
+    expect(root.querySelector('svg')).toBe(previous)
+    await vi.waitFor(() =>
+      expect(root.querySelector('[role="status"]')).toBeNull(),
+    )
+    expect(root.querySelector('svg')).not.toBe(previous)
+    expect(root.querySelector('svg')).not.toBeNull()
+  })
+
+  test('preserves diagrams independently across separate patch gaps', async () => {
+    const { root, updater } = await createUpdater()
+    updater.applyFullHtml(
+      block('a', 'One') +
+        '<div data-pvmd-block-id="separator"><p>Unchanged</p></div>' +
+        block('b', 'Two'),
+    )
+    await vi.waitFor(() => expect(root.querySelectorAll('svg')).toHaveLength(2))
+    const previous = [...root.querySelectorAll('svg')]
+    const separator = root.querySelector('[data-pvmd-block-id="separator"]')
+    updater.applyPatch([
+      { type: 'remove', blockId: 'a' },
+      {
+        type: 'insert',
+        beforeBlockId: 'separator',
+        html: block('aa', 'Updated one'),
+      },
+      { type: 'remove', blockId: 'b' },
+      { type: 'insert', html: block('bb', 'Updated two') },
+    ])
+    expect([...root.querySelectorAll('svg')]).toEqual(previous)
+    expect(root.querySelector('[data-pvmd-block-id="separator"]')).toBe(
+      separator,
+    )
+    await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(4))
+    expect(renderedSources).toEqual([
+      'graph TD\n  A[One]',
+      'graph TD\n  A[Two]',
+      'graph TD\n  A[Updated one]',
+      'graph TD\n  A[Updated two]',
+    ])
+  })
+
+  test('does not resurrect a removed diagram when its render finishes', async () => {
+    const { root, updater } = await createUpdater()
+    updater.applyFullHtml(block('first', 'First'))
+    await vi.waitFor(() => expect(root.querySelector('svg')).not.toBeNull())
+    let finish: (() => void) | undefined
+    runMock.mockImplementationOnce(
+      ({ nodes }) =>
+        new Promise<void>((resolve) => {
+          finish = () => {
+            nodes[0]!.innerHTML = '<svg></svg>'
+            resolve()
+          }
+        }),
+    )
+    updater.applyPatch([
+      { type: 'remove', blockId: 'first' },
+      { type: 'insert', html: block('second', 'Second') },
+    ])
+    await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(2))
+    updater.applyPatch([{ type: 'remove', blockId: 'second' }])
+    finish!()
+    await vi.waitFor(() =>
+      expect(document.querySelector('.mermaid-render-container')).toBeNull(),
+    )
+    expect(root.querySelector('pre')).toBeNull()
+    expect(runMock).toHaveBeenCalledTimes(2)
+  })
+
+  test('clears pending state when an edit reverts to the already rendered source', async () => {
+    const { root, updater } = await createUpdater()
+    updater.applyFullHtml(block('first', 'Original'))
+    await vi.waitFor(() => expect(root.querySelector('svg')).not.toBeNull())
+    const previous = root.querySelector('svg')
+    let finish: (() => void) | undefined
+    runMock.mockImplementationOnce(
+      ({ nodes }) =>
+        new Promise<void>((resolve) => {
+          finish = () => {
+            nodes[0]!.innerHTML = '<svg><text>Superseded edit</text></svg>'
+            resolve()
+          }
+        }),
+    )
+    updater.applyPatch([
+      { type: 'remove', blockId: 'first' },
+      { type: 'insert', html: block('changed', 'Changed') },
+    ])
+    await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(2))
+    updater.applyPatch([
+      { type: 'remove', blockId: 'changed' },
+      { type: 'insert', html: block('first', 'Original') },
+    ])
+    finish!()
+    await vi.waitFor(() => expect(root.querySelector('[aria-busy]')).toBeNull())
+    expect(root.querySelector('svg')).toBe(previous)
+    expect(runMock).toHaveBeenCalledTimes(2)
   })
 })
