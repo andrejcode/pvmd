@@ -126,6 +126,52 @@ describe('parseArguments', () => {
       )
     })
 
+    describe.each(['-h', '--help'])(
+      '%s after a value-taking option',
+      (help) => {
+        test.each([
+          '--port',
+          '-p',
+          '--max-size',
+          '--max-image-size',
+          '--browser',
+          '-b',
+          '--theme',
+          '-t',
+        ])(
+          'shows help instead of consuming it as the value of %s',
+          (option) => {
+            expect(() => parseArguments(['test.md', option, help])).toThrow(
+              'Process exited with code 0',
+            )
+            expect(consoleLogSpy).toHaveBeenCalledWith(
+              expect.stringContaining('Usage: pvmd [options] <file>'),
+            )
+          },
+        )
+      },
+    )
+
+    test('preserves valid assignments around a help flag following an option', () => {
+      expect(() =>
+        parseArguments([
+          'test.md',
+          '--theme',
+          'dark-high-contrast',
+          '--browser',
+          '-h',
+          '--port',
+          '9000',
+        ]),
+      ).toThrow('Process exited with code 0')
+
+      expect(config.theme).toBe('dark-high-contrast')
+      expect(config.port).toBe(9000)
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Usage: pvmd [options] <file>'),
+      )
+    })
+
     test('applies valid scheduled CLI assignments before rendering help', () => {
       expect(() => parseArguments(['--port', '9000', '--help'])).toThrow(
         'Process exited with code 0',
@@ -436,6 +482,15 @@ describe('parseArguments', () => {
     )
     expect(() => parseArguments(['test.md', '--theme', 'sepia'])).toThrow(
       'Unsupported theme "sepia". Supported themes: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind.',
+    )
+  })
+
+  test.each([
+    ['--browser', 'browser'],
+    ['--theme', 'theme'],
+  ])('still rejects unsupported flag-like values for %s', (option, label) => {
+    expect(() => parseArguments(['test.md', option, '--unsupported'])).toThrow(
+      `Unsupported ${label} "--unsupported". Supported ${label}s:`,
     )
   })
 

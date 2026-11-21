@@ -152,6 +152,12 @@ export function parseArguments(args: string[], nvim = false) {
       if (option.takesValue) {
         const value = args[i + 1]
 
+        if (value === '--help' || value === '-h') {
+          state.requestedHelp = true
+          i++
+          continue
+        }
+
         if (value === undefined || value === '') {
           setFatalError(state, createMissingValueError(name, option))
           continue
