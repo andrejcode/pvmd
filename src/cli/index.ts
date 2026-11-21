@@ -1,6 +1,7 @@
 import { type Config } from './config'
 import { loadLocalConfigWithBlockedKeys } from './local-config'
 import {
+  findOption,
   formatOptionName,
   resolveOption,
   showHelp,
@@ -49,17 +50,23 @@ function setFatalError(state: ParseState, error: Error) {
 }
 
 function recordTerminalAction(state: ParseState, arg: string) {
-  if (arg === '--help' || arg === '-h') {
+  const resolved = findOption(arg)
+  if (!resolved) {
+    return
+  }
+
+  const { name, option } = resolved
+  if (option.terminalAction === 'help') {
     state.requestedHelp = true
     return
   }
 
-  if (arg === '--version' || arg === '-v') {
+  if (option.terminalAction === 'version') {
     state.requestedVersion = true
     return
   }
 
-  if (arg === '--no-local-config') {
+  if (name === 'no-local-config') {
     state.skipLocalConfig = true
   }
 }
@@ -124,12 +131,7 @@ export function parseArguments(args: string[], nvim = false) {
       const { name, option } = resolvedOption
 
       if (option.kind === 'terminal') {
-        if (option.terminalAction === 'help') {
-          state.requestedHelp = true
-        } else if (option.terminalAction === 'version') {
-          state.requestedVersion = true
-        }
-
+        recordTerminalAction(state, arg)
         continue
       }
 
@@ -152,13 +154,17 @@ export function parseArguments(args: string[], nvim = false) {
       if (option.takesValue) {
         const value = args[i + 1]
 
-        if (value === '--help' || value === '-h') {
-          state.requestedHelp = true
-          i++
+        if (value === undefined || value === '') {
+          setFatalError(state, createMissingValueError(name, option))
           continue
         }
 
-        if (value === undefined || value === '') {
+        const nextOption = findOption(value)
+        if (nextOption?.option.kind === 'terminal') {
+          continue
+        }
+
+        if (nextOption) {
           setFatalError(state, createMissingValueError(name, option))
           continue
         }

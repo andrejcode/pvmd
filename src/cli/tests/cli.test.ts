@@ -287,6 +287,27 @@ describe('parseArguments', () => {
         'Process exited with code 0',
       )
     })
+
+    test('finds help after a recognized option reveals a missing value', () => {
+      expect(() =>
+        parseArguments(['test.md', '--browser', '--theme', '--help']),
+      ).toThrow('Process exited with code 0')
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Usage: pvmd [options] <file>'),
+      )
+    })
+
+    test('honors no-local-config after a missing value when showing help', () => {
+      mockLocalConfig({ port: 8123 })
+
+      expect(() =>
+        parseArguments(['--browser', '--no-local-config', '--help']),
+      ).toThrow('Process exited with code 0')
+      expect(fileSystem.readFileSync).not.toHaveBeenCalled()
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Port number (default: 8765;'),
+      )
+    })
   })
 
   describe('terminal version output', () => {
@@ -318,6 +339,60 @@ describe('parseArguments', () => {
       )
       expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
     })
+
+    describe.each(['-v', '--version'])(
+      '%s after a value-taking option',
+      (version) => {
+        test.each([
+          '--port',
+          '-p',
+          '--max-size',
+          '--max-image-size',
+          '--browser',
+          '-b',
+          '--theme',
+          '-t',
+        ])(
+          'prints version instead of consuming it as the value of %s',
+          (option) => {
+            expect(() => parseArguments(['test.md', option, version])).toThrow(
+              'Process exited with code 0',
+            )
+            expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
+          },
+        )
+      },
+    )
+
+    test.each([
+      ['test.md', '--browser', '--theme', '--version'],
+      ['test.md', '--port', '-1', '-v'],
+      ['test.md', '--browser', 'nonexistent-browser', '--version'],
+      ['test.md', '--wat', '-v'],
+    ])('prints version despite parsing errors: %j', (...args) => {
+      mockLocalConfig({ port: 8123 })
+
+      expect(() => parseArguments(args)).toThrow('Process exited with code 0')
+      expect(consoleLogSpy).toHaveBeenCalledWith('pvmd v0.0.0')
+      expect(fileSystem.readFileSync).not.toHaveBeenCalled()
+    })
+
+    test.each([
+      ['--version', '--help'],
+      ['-h', '-v'],
+      ['--browser', '--version', '--theme', '--help'],
+      ['--theme', '-h', '--browser', '-v'],
+      ['--browser', '--theme', '-v', '-h'],
+    ])(
+      'prefers help when both terminal actions are requested: %j',
+      (...args) => {
+        expect(() => parseArguments(args)).toThrow('Process exited with code 0')
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Usage: pvmd [options] <file>'),
+        )
+        expect(consoleLogSpy).not.toHaveBeenCalledWith('pvmd v0.0.0')
+      },
+    )
   })
 
   test('returns the first markdown path when parsing succeeds', () => {
@@ -427,6 +502,26 @@ describe('parseArguments', () => {
   test('treats a missing port value as a scan-time error', () => {
     expect(() => parseArguments(['test.md', '--port'])).toThrow(
       'Port option requires a value.',
+    )
+  })
+
+  describe.each([
+    ['--port', 'Port'],
+    ['-p', 'Port'],
+    ['--max-size', 'Max size'],
+    ['--max-image-size', 'Max image size'],
+    ['--browser', 'Browser'],
+    ['-b', 'Browser'],
+    ['--theme', 'Theme'],
+    ['-t', 'Theme'],
+  ])('missing value for %s', (option, label) => {
+    test.each(['--theme', '-o'])(
+      'reports a missing value when followed by recognized option %s',
+      (nextOption) => {
+        expect(() => parseArguments(['test.md', option, nextOption])).toThrow(
+          `${label} option requires a value.`,
+        )
+      },
     )
   })
 

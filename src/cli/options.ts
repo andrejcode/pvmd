@@ -184,22 +184,26 @@ for (const [key, value] of Object.entries(options)) {
   }
 }
 
-export function resolveOption(arg: string): ResolvedOption | null {
+export function findOption(arg: string): ResolvedOption | null {
   if (arg.startsWith('--')) {
     const name = arg.slice(2)
     const option = longToOption.get(name)
-    if (!option) throw new Error('Unknown option: --' + name)
-    return { name, option }
+    return option ? { name, option } : null
   }
 
   if (arg.startsWith('-')) {
-    const name = arg.slice(1)
-    const resolved = shortToOption.get(name)
-    if (!resolved) throw new Error('Unknown option: -' + name)
-    return resolved
+    return shortToOption.get(arg.slice(1)) ?? null
   }
 
   return null
+}
+
+export function resolveOption(arg: string): ResolvedOption | null {
+  const resolved = findOption(arg)
+  if (!resolved && arg.startsWith('-')) {
+    throw new Error('Unknown option: ' + arg)
+  }
+  return resolved
 }
 
 export function formatOptionName(name: string) {

@@ -83,7 +83,9 @@ pvmd README.md --max-image-size 40960
 
 The table lists built-in settings. `pvmd --help` shows effective defaults after config and CLI overrides. Add `--no-local-config` to ignore the config file.
 
-`-h` and `--help` always show help, including directly after an option that requires a value (for example, `pvmd README.md --theme --help`). Without a help flag, unsupported values still produce errors.
+`-h` / `--help` and `-v` / `--version` always show help or version, including directly after an option that requires a value (for example, `pvmd README.md --theme --help` or `pvmd README.md --browser --version`). Help takes precedence when both are present.
+
+If a value-taking option is followed by another recognized option, the CLI reports a missing value (for example, `--browser --theme`). Without help or version flags, unsupported values still produce errors. Negative numbers remain values and receive the usual numeric validation.
 
 | Option                    | Config Key      | Built-In Default | Purpose                                                        |
 | ------------------------- | --------------- | ---------------- | -------------------------------------------------------------- |
