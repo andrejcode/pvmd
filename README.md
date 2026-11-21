@@ -105,7 +105,7 @@ If a value-taking option is followed by another recognized option, the CLI repor
 
 Size values must be finite positive numbers. Each option may be provided once, and the CLI accepts exactly one Markdown file path.
 
-Supported browser values: `default`, `chrome`, `firefox`, `edge`, `brave`.
+Supported browser values: `default`, `chrome`, `firefox`, `edge`, `brave`, and `safari` on macOS only. On other platforms, `safari` is rejected on the CLI and ignored with a warning in local config.
 
 Supported theme values: `default`, `light`, `dark`, `dark-dimmed`, `dark-high-contrast`, `dark-colorblind`, `light-colorblind`.
 

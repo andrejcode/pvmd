@@ -4,6 +4,10 @@ import { parseArguments } from '../index'
 import { fileSystem, osPaths } from '../local-config'
 
 describe('parseArguments', () => {
+  const supportedBrowsers =
+    'default, chrome, firefox, edge, brave' +
+    (process.platform === 'darwin' ? ', safari' : '')
+
   test('accepts a private Neovim launch without a file path', () => {
     expect(parseArguments(['--port', '0'], true)).toBe('')
     expect(config.port).toBe(0)
@@ -119,7 +123,7 @@ describe('parseArguments', () => {
         'Open automatically in the selected browser (default: true)',
       )
       expect(output).toContain(
-        'Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: firefox)',
+        `Browser to open automatically (supported: ${supportedBrowsers}; default: firefox)`,
       )
       expect(output).toContain(
         'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: dark)',
@@ -229,7 +233,7 @@ describe('parseArguments', () => {
           'Open automatically in the selected browser (default: false)',
         )
         expect(output).toContain(
-          'Browser to open automatically (supported: default, chrome, firefox, edge, brave; default: default)',
+          `Browser to open automatically (supported: ${supportedBrowsers}; default: default)`,
         )
         expect(output).toContain(
           'GitHub Markdown theme to use (supported: default, light, dark, dark-dimmed, dark-high-contrast, dark-colorblind, light-colorblind; default: default)',
@@ -561,11 +565,72 @@ describe('parseArguments', () => {
     expect(config.browser).toBe('brave')
 
     expect(() => parseArguments(['test.md', '--browser'])).toThrow(
-      'Browser option requires a value. Supported browsers: default, chrome, firefox, edge, brave.',
+      `Browser option requires a value. Supported browsers: ${supportedBrowsers}.`,
     )
-    expect(() => parseArguments(['test.md', '--browser', 'safari'])).toThrow(
-      'Unsupported browser "safari". Supported browsers: default, chrome, firefox, edge, brave.',
+    expect(() =>
+      parseArguments(['test.md', '--browser', 'nonexistent-browser']),
+    ).toThrow(
+      `Unsupported browser "nonexistent-browser". Supported browsers: ${supportedBrowsers}.`,
     )
+  })
+
+  describe.each(['darwin', 'linux', 'win32'])('Safari on %s', (platform) => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+      vi.unstubAllGlobals()
+      vi.resetModules()
+    })
+
+    test('only accepts and advertises Safari on macOS for CLI and local config', async () => {
+      vi.stubGlobal('process', { ...process, platform })
+      vi.resetModules()
+
+      const { parseArguments } = await import('../index')
+      const { config } = await import('../config')
+      const { applyLocalConfig } = await import('../local-config')
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      vi.spyOn(process, 'exit').mockImplementation((code) => {
+        throw new Error(`Process exited with code ${code}`)
+      })
+
+      const args = ['--no-local-config', 'test.md', '--browser', 'SaFaRi']
+
+      if (platform === 'darwin') {
+        expect(parseArguments(args)).toBe('test.md')
+        expect(config.browser).toBe('safari')
+      } else {
+        expect(() => parseArguments(args)).toThrow(
+          'Unsupported browser "SaFaRi". Supported browsers: default, chrome, firefox, edge, brave.',
+        )
+        expect(config.browser).toBe('default')
+      }
+
+      applyLocalConfig({ browser: 'safari' })
+
+      if (platform === 'darwin') {
+        expect(config.browser).toBe('safari')
+        expect(warnSpy).not.toHaveBeenCalled()
+      } else {
+        expect(config.browser).toBe('default')
+        expect(warnSpy).toHaveBeenCalledWith(
+          'Invalid setting "browser" in .pvmd/config.json. Unsupported browser "safari". Supported browsers: default, chrome, firefox, edge, brave. Ignoring setting.',
+        )
+      }
+
+      expect(() => parseArguments(['--no-local-config', '--help'])).toThrow(
+        'Process exited with code 0',
+      )
+      const help = logSpy.mock.calls.flat().join('\n')
+      expect(help).toContain(
+        'Browser to open automatically (supported: default, chrome, firefox, edge, brave',
+      )
+      if (platform === 'darwin') {
+        expect(help).toContain(', safari; default: safari)')
+      } else {
+        expect(help).not.toContain('safari')
+      }
+    })
   })
 
   test('defers theme validation until finalization', () => {

@@ -35,6 +35,7 @@ describe('openPreviewInBrowser', () => {
 
   afterEach(() => {
     warnSpy.mockRestore()
+    vi.unstubAllGlobals()
   })
 
   test('warns without repeating the URL when browser auto-open fails', async () => {
@@ -96,4 +97,45 @@ describe('openPreviewInBrowser', () => {
       app: { name: 'google chrome' },
     })
   })
+
+  test('checks availability and launches Safari by app name on macOS', async () => {
+    vi.stubGlobal('process', { ...process, platform: 'darwin' })
+    const { execFile } = await import('node:child_process')
+    const open = vi.mocked((await import('open')).default)
+    open.mockClear()
+    vi.mocked(execFile).mockClear()
+    config.browser = 'safari'
+
+    await openPreviewInBrowser('http://127.0.0.1:3000/')
+
+    expect(execFile).toHaveBeenCalledWith(
+      'open',
+      ['-Ra', 'Safari'],
+      expect.any(Function),
+    )
+    expect(open).toHaveBeenCalledWith('http://127.0.0.1:3000/', {
+      app: { name: 'Safari' },
+    })
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  test.each(['linux', 'win32'])(
+    'does not launch Safari on %s',
+    async (platform) => {
+      vi.stubGlobal('process', { ...process, platform })
+      const { execFile } = await import('node:child_process')
+      const open = vi.mocked((await import('open')).default)
+      open.mockClear()
+      vi.mocked(execFile).mockClear()
+      config.browser = 'safari'
+
+      await openPreviewInBrowser('http://127.0.0.1:3000/')
+
+      expect(execFile).not.toHaveBeenCalled()
+      expect(open).not.toHaveBeenCalled()
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Safari is only supported on macOS. Use the preview address above to open it manually.',
+      )
+    },
+  )
 })

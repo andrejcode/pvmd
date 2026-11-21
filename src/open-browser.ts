@@ -83,7 +83,12 @@ export default async function openPreviewInBrowser(url: string): Promise<void> {
       return
     }
 
-    const appName = apps[config.browser]
+    if (config.browser === 'safari' && process.platform !== 'darwin') {
+      throw new BrowserUnavailableError('Safari is only supported on macOS.')
+    }
+
+    const appName =
+      config.browser === 'safari' ? 'Safari' : apps[config.browser]
 
     await ensureConfiguredBrowserAvailable(config.browser, appName)
     await open(url, { app: { name: appName } })

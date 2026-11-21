@@ -4,6 +4,7 @@ export const SUPPORTED_BROWSERS = [
   'firefox',
   'edge',
   'brave',
+  ...(process.platform === 'darwin' ? (['safari'] as const) : []),
 ] as const
 
 export type BrowserOption = (typeof SUPPORTED_BROWSERS)[number]
@@ -132,14 +133,15 @@ export function parseBrowserValue(value: unknown): BrowserOption {
   }
 
   const normalized = value.trim().toLowerCase()
+  const browser = SUPPORTED_BROWSERS.find((browser) => browser === normalized)
 
-  if (!SUPPORTED_BROWSERS.includes(normalized as BrowserOption)) {
+  if (browser === undefined) {
     throw new Error(
       `Unsupported browser "${value}". Supported browsers: ${formatSupportedBrowsers()}.`,
     )
   }
 
-  return normalized as BrowserOption
+  return browser
 }
 
 export function parseThemeValue(value: unknown): ThemeOption {
