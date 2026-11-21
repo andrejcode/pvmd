@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Footnote numbers now restart at 1 on every live render, including Neovim edits, instead of increasing when reference blocks are cached.
 - Mermaid live edits and theme changes keep the previous diagram visible until the latest replacement is ready, avoiding temporary layout collapse. Invalid edits retain the last valid diagram with a styled, explicitly pvmd-labelled error notice.
 - Mermaid diagrams now update automatically when the system light/dark preference changes, without refreshing the page. Explicitly selected themes remain unchanged.
 

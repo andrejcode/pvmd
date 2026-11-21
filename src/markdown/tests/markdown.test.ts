@@ -592,6 +592,26 @@ const example = 'code block';
       expect(firstHtml).toContain('id="footnote-1"')
     })
 
+    test('should keep footnote numbers consecutive across cached live edits', () => {
+      const notes =
+        'First[^alpha], second[^beta], repeated[^alpha].\n\n[^alpha]: Alpha\n\n[^beta]: Beta'
+
+      for (let revision = 0; revision < 10; revision += 1) {
+        const html = renderMarkdown(`Revision ${revision}\n\n${notes}`)
+        const references = [
+          ...html.matchAll(/<a id="footnote-ref-[^"]+"[^>]*>(\d+)<\/a>/g),
+        ]
+
+        expect(references.map((match) => match[1])).toEqual(['1', '2', '1'])
+        expect(html).toContain('id="footnote-alpha"')
+        expect(html).toContain('id="footnote-beta"')
+        expect(html).toContain('href="#footnote-ref-alpha-2"')
+      }
+
+      const html = renderMarkdown('Only[^other].\n\n[^other]: Other')
+      expect(html).toMatch(/href="#footnote-other"[^>]*>1<\/a>/)
+    })
+
     test('should produce identical syntax-highlighted code block output from cached and uncached renders', () => {
       const markdown = '```javascript\nconst x = 1;\n```'
       const first = renderMarkdownBlocks(markdown)

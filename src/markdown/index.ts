@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { common, createStarryNight } from '@wooorm/starry-night'
 import { nameToEmoji } from 'gemoji'
 import { toHtml } from 'hast-util-to-html'
-import { marked } from 'marked'
+import { Marked } from 'marked'
 import markedAlert from 'marked-alert'
 import { markedEmoji } from 'marked-emoji'
 import markedFootnote from 'marked-footnote'
@@ -62,55 +62,62 @@ export function clearRenderCaches(): void {
   blockHtmlCache.clear()
 }
 
-marked.use(
-  {
-    async: false,
-    breaks: false,
-    gfm: true,
-    pedantic: false,
-  },
-  markedAlert(),
-  markedFootnote(),
-  markedKatex({ throwOnError: false }),
-  markedEmoji(markedEmojiOptions),
-  markedHighlight({
-    highlight(code, lang) {
-      return highlightCode(code, lang)
+function createMarkdownParser(): Marked {
+  return new Marked(
+    {
+      async: false,
+      breaks: false,
+      gfm: true,
+      pedantic: false,
     },
-  }),
-  gfmHeadingId(),
-  {
-    renderer: {
-      code({ text, lang }) {
-        if (!isMermaidLanguage(lang)) {
-          return false
-        }
+    markedAlert(),
+    markedFootnote(),
+    markedKatex({ throwOnError: false }),
+    markedEmoji(markedEmojiOptions),
+    markedHighlight({
+      highlight(code, lang) {
+        return highlightCode(code, lang)
+      },
+    }),
+    gfmHeadingId(),
+    {
+      renderer: {
+        code({ text, lang }) {
+          if (!isMermaidLanguage(lang)) {
+            return false
+          }
 
-        return `<pre class="mermaid">${escapeHtmlText(text)}</pre>\n`
+          return `<pre class="mermaid">${escapeHtmlText(text)}</pre>\n`
+        },
       },
     },
-  },
-)
+  )
+}
 
-type MarkdownToken = ReturnType<typeof marked.lexer>[number]
+type MarkdownToken = ReturnType<Marked['lexer']>[number]
 type MarkdownTokenGroup = MarkdownToken[]
 
 export function renderMarkdownBlocks(
   content: string,
   httpsOnly = false,
 ): LiveUpdateBlock[] {
+  const marked = createMarkdownParser()
   const normalizedContent = preprocessMarkdownContent(
     normalizeMarkdownContent(content),
+    marked,
   )
   const tokenGroups = groupDisclosureTokens(
-    walkMarkdownTokens(processMarkdownTokens(marked.lexer(normalizedContent))),
+    walkMarkdownTokens(
+      processMarkdownTokens(marked.lexer(normalizedContent), marked),
+      marked,
+    ),
   )
   const blockOccurrences = new Map<string, number>()
 
   const blocks: LiveUpdateBlock[] = []
 
   for (const tokenGroup of tokenGroups) {
-    const html = renderTokensHtml(tokenGroup, httpsOnly)
+    const html = renderTokensHtml(tokenGroup, httpsOnly, marked)
     if (!html.trim()) {
       continue
     }
@@ -158,15 +165,21 @@ function normalizeMarkdownContent(content: string): string {
   return content.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, '')
 }
 
-function preprocessMarkdownContent(content: string): string {
+function preprocessMarkdownContent(content: string, marked: Marked): string {
   return marked.defaults.hooks?.preprocess?.call(marked, content) ?? content
 }
 
-function processMarkdownTokens(tokens: MarkdownToken[]): MarkdownToken[] {
+function processMarkdownTokens(
+  tokens: MarkdownToken[],
+  marked: Marked,
+): MarkdownToken[] {
   return marked.defaults.hooks?.processAllTokens?.call(marked, tokens) ?? tokens
 }
 
-function walkMarkdownTokens(tokens: MarkdownToken[]): MarkdownToken[] {
+function walkMarkdownTokens(
+  tokens: MarkdownToken[],
+  marked: Marked,
+): MarkdownToken[] {
   if (marked.defaults.walkTokens) {
     void marked.walkTokens(tokens, marked.defaults.walkTokens)
   }
@@ -241,6 +254,7 @@ function getTokenHtml(token: MarkdownToken): string {
 function renderTokensHtml(
   tokenGroup: MarkdownTokenGroup,
   httpsOnly: boolean,
+  marked: Marked,
 ): string {
   const key = getRenderCacheKey(tokenGroup, httpsOnly)
   const cached = blockHtmlCache.get(key)
