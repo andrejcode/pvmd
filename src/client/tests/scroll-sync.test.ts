@@ -44,6 +44,45 @@ describe('scroll synchronization', () => {
     })
   })
 
+  test('preserves top padding on initial alignment and after layout changes', () => {
+    root.style.paddingTop = '45px'
+    vi.spyOn(root.children[0]!, 'getBoundingClientRect').mockReturnValue({
+      top: -55,
+      height: 200,
+    } as DOMRect)
+    const scroll = createScrollSync(root)
+    scroll({ kind: 'scroll', blockId: 'first', progress: 0 })
+    expect(window.scrollTo).toHaveBeenLastCalledWith({
+      top: 0,
+      behavior: 'instant',
+    })
+    resize([], {} as ResizeObserver)
+    expect(window.scrollTo).toHaveBeenLastCalledWith({
+      top: 0,
+      behavior: 'instant',
+    })
+    scroll({ kind: 'scroll', blockId: 'first', progress: 0.5 })
+    expect(window.scrollTo).toHaveBeenLastCalledWith({
+      top: 145,
+      behavior: 'instant',
+    })
+  })
+
+  test('includes bottom padding at the end without offsetting other targets', () => {
+    root.style.padding = '30px 0 60px'
+    const scroll = createScrollSync(root)
+    scroll({ kind: 'scroll', blockId: 'second', progress: 1 })
+    expect(window.scrollTo).toHaveBeenLastCalledWith({
+      top: 660,
+      behavior: 'instant',
+    })
+    scroll({ kind: 'scroll', blockId: 'second', progress: 0 })
+    expect(window.scrollTo).toHaveBeenLastCalledWith({
+      top: 400,
+      behavior: 'instant',
+    })
+  })
+
   test('realigns after delayed layout and clamps scrolling above the document', () => {
     const scroll = createScrollSync(root)
     scroll({ kind: 'scroll', blockId: 'second', progress: 0 })

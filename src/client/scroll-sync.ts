@@ -14,10 +14,23 @@ export function createScrollSync(root: HTMLElement) {
     )
     if (!block) return
     const rect = block.getBoundingClientRect()
+    const style = getComputedStyle(root)
+    const leadingPadding =
+      block === root.firstElementChild && target.progress === 0
+        ? parseFloat(style.paddingTop || '0')
+        : 0
+    const trailingPadding =
+      block === root.lastElementChild && target.progress === 1
+        ? parseFloat(style.paddingBottom || '0')
+        : 0
     window.scrollTo({
       top: Math.max(
         0,
-        window.scrollY + rect.top + rect.height * target.progress,
+        window.scrollY +
+          rect.top +
+          rect.height * target.progress -
+          leadingPadding +
+          trailingPadding,
       ),
       behavior: 'instant',
     })

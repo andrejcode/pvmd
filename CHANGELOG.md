@@ -14,11 +14,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Neovim scroll synchronization now preserves the preview's top and bottom padding at document boundaries, avoiding a downward jump when opening a preview at the first line.
 - Footnote numbers now restart at 1 on every live render, including Neovim edits, instead of increasing when reference blocks are cached.
 - Mermaid live edits and theme changes keep the previous diagram visible until the latest replacement is ready, avoiding temporary layout collapse. Invalid edits retain the last valid diagram with a styled, explicitly pvmd-labelled error notice.
 - Mermaid diagrams now update automatically when the system light/dark preference changes, without refreshing the page. Explicitly selected themes remain unchanged.
 
-## 0.4.0 - 2026-11-18
+## v0.4.0 - 2026-11-18
 
 ### Added
 
@@ -31,7 +32,7 @@ All notable changes to this project will be documented in this file.
 
 - Extracted a shared SSE preview controller so filesystem watching and Neovim buffers reuse the same live-update pipeline.
 
-## 0.3.1 - 2026-10-22
+## v0.3.1 - 2026-10-22
 
 ### Added
 
@@ -47,7 +48,7 @@ All notable changes to this project will be documented in this file.
 
 - Replaced misleading HTTP `404` responses for oversized local images with HTTP `413 Content Too Large` and terminal messages showing the filename, effective limit, and guidance to resize, compress, or raise the image limit.
 
-## 0.3.0 - 2026-05-20
+## v0.3.0 - 2026-05-20
 
 ### Added
 
@@ -71,7 +72,7 @@ All notable changes to this project will be documented in this file.
 - Kept Markdown content inside `<details>` disclosures so GitHub-style expand/collapse sections render and toggle correctly.
 - Preserved manually expanded or collapsed `<details>` disclosures across live preview updates.
 
-## 0.2.4 - 2026-04-05
+## v0.2.4 - 2026-04-05
 
 ### Added
 
@@ -84,7 +85,7 @@ All notable changes to this project will be documented in this file.
 - Switched markdown theme styling to server-side theme injection so each preview includes only the selected `github-markdown-css` stylesheet, while the default still follows the system color-scheme preference.
 - Added bounded LRU render caches for syntax highlighting and per-block HTML generation so repeated renders of large markdown documents reuse existing work without changing heading IDs, footnotes, or highlighted output.
 
-## 0.2.3 - 2026-04-02
+## v0.2.3 - 2026-04-02
 
 ### Added
 
@@ -100,7 +101,7 @@ All notable changes to this project will be documented in this file.
 - Replaced generic browser auto-open failures with clearer fallback warnings that point users to the printed preview address instead of failing silently.
 - Treated root requests with query strings as the main page request instead of returning a 404, preserving compatibility for future URL-based preview options without breaking page loads.
 
-## 0.2.2 - 2026-03-30
+## v0.2.2 - 2026-03-30
 
 ### Fixed
 
@@ -113,7 +114,7 @@ All notable changes to this project will be documented in this file.
 - Used the actual bound port in startup logs and browser auto-open URLs so `--port 0` opens the assigned preview address instead of `127.0.0.1:0`.
 - Replaced raw permission-denied startup crashes on restricted ports with a friendlier message that explains low-port permission requirements and suggests using a higher port.
 
-## 0.2.1 - 2026-03-29
+## v0.2.1 - 2026-03-29
 
 ### Fixed
 
@@ -122,7 +123,7 @@ All notable changes to this project will be documented in this file.
 - Enforced markdown file validation earlier in startup and during watcher-driven refreshes so invalid paths and late file changes fail consistently.
 - Treated render-time validation failures as fatal CLI errors so invalid markdown input exits consistently.
 
-## 0.2.0 - 2026-03-27
+## v0.2.0 - 2026-03-27
 
 ### Added
 
@@ -146,7 +147,7 @@ All notable changes to this project will be documented in this file.
 - Restored KaTeX rendering support in both full and incremental markdown rendering.
 - Restored footnote ordering and live updates so footnotes render at the end of the document and patch correctly when note content changes.
 
-## 0.1.0 - Initial Release
+## v0.1.0 - Initial Release
 
 ### Added
 
