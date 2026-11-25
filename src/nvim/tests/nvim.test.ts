@@ -35,7 +35,7 @@ describe('Neovim preview session', () => {
     input.write(`${JSON.stringify(message)}\n`)
   }
 
-  async function initialize(content = '# Unsaved') {
+  async function initialize(content = '# Unsaved', line?: number) {
     write({
       type: 'init',
       protocol: 1,
@@ -43,6 +43,7 @@ describe('Neovim preview session', () => {
       content,
       path: '/missing/notes.md',
       baseDir: '/tmp',
+      line,
     })
     await vi.waitFor(() =>
       expect(send).toHaveBeenCalledWith(
@@ -125,6 +126,47 @@ describe('Neovim preview session', () => {
         message: 'Neovim session is already initialized',
       }),
     )
+  })
+
+  test('synchronizes viewport-only changes and restores them on reconnect', async () => {
+    const url = await initialize('# First\n\nParagraph\ncontinued\n\n# Last', 3)
+    const response = await fetch(`${url}events`)
+    const reader =
+      response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>
+    const decoder = new TextDecoder()
+    try {
+      const initial = decoder.decode((await reader.read()).value)
+      expect(initial).toContain('"kind":"full"')
+      expect(initial).toContain('"kind":"scroll"')
+      expect(initial).toContain('"progress":0')
+      write({ type: 'scroll', revision: 1, line: 4 })
+      const scroll = decoder.decode((await reader.read()).value)
+      expect(scroll).toContain('"kind":"scroll"')
+      expect(scroll).toContain('"progress":0.5')
+      expect(scroll).not.toContain('"kind":"patch"')
+      write({ type: 'scroll', revision: 99, line: 1 })
+      const reconnect = await fetch(`${url}events`)
+      const nextReader =
+        reconnect.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>
+      try {
+        const snapshot = decoder.decode((await nextReader.read()).value)
+        expect(snapshot).toContain('"progress":0.5')
+      } finally {
+        await nextReader.cancel()
+      }
+      write({
+        type: 'update',
+        revision: 2,
+        content: '\n\n# First\n\nParagraph\ncontinued\n\n# Last',
+        line: 5,
+      })
+      const shifted = decoder.decode((await reader.read()).value)
+      expect(shifted).toContain('"kind":"scroll"')
+      expect(shifted).toContain('"progress":0')
+      expect(shifted).not.toContain('"kind":"patch"')
+    } finally {
+      await reader.cancel()
+    }
   })
 
   test('ends SSE clients and detaches the input at EOF', async () => {

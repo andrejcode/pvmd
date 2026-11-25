@@ -1,6 +1,7 @@
 import {
   type LiveUpdateMessage,
   type LiveUpdateOperation,
+  type ScrollUpdateMessage,
 } from '@/shared/live-update'
 import {
   resetDisconnectedAlert,
@@ -12,6 +13,7 @@ interface LiveUpdatesOptions {
   url?: string
   onFullHtml: (html: string) => void
   onPatch: (ops: LiveUpdateOperation[]) => void
+  onScroll?: (message: ScrollUpdateMessage) => void
 }
 
 export function connectLiveUpdates({
@@ -19,6 +21,7 @@ export function connectLiveUpdates({
   url = '/events',
   onFullHtml,
   onPatch,
+  onScroll,
 }: LiveUpdatesOptions): EventSource | null {
   if (!enabled) {
     return null
@@ -48,6 +51,11 @@ export function connectLiveUpdates({
 
     if (message.kind === 'full') {
       onFullHtml(message.html)
+      return
+    }
+
+    if (message.kind === 'scroll') {
+      onScroll?.(message)
       return
     }
 

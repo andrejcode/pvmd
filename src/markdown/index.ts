@@ -103,14 +103,13 @@ export function renderMarkdownBlocks(
 ): LiveUpdateBlock[] {
   const marked = createMarkdownParser()
   const normalizedContent = preprocessMarkdownContent(
-    normalizeMarkdownContent(content),
+    normalizeMarkdownContent(content).replace(/\r\n?/g, '\n'),
     marked,
   )
+  const tokens = marked.lexer(normalizedContent)
+  const sourceLines = locateSourceLines(tokens, normalizedContent)
   const tokenGroups = groupDisclosureTokens(
-    walkMarkdownTokens(
-      processMarkdownTokens(marked.lexer(normalizedContent), marked),
-      marked,
-    ),
+    walkMarkdownTokens(processMarkdownTokens(tokens, marked), marked),
   )
   const blockOccurrences = new Map<string, number>()
 
@@ -127,14 +126,49 @@ export function renderMarkdownBlocks(
     blockOccurrences.set(key, occurrence)
 
     const id = createBlockId(getBlockType(tokenGroup), key, occurrence)
+    const ranges = tokenGroup.flatMap((token) => {
+      const range = sourceLines.get(token)
+      return range ? [range] : []
+    })
 
     blocks.push({
       id,
       html,
+      ...(ranges.length
+        ? {
+            sourceStartLine: Math.min(...ranges.map((range) => range.start)),
+            sourceEndLine: Math.max(...ranges.map((range) => range.end)),
+          }
+        : {}),
     })
   }
 
   return blocks
+}
+
+function locateSourceLines(
+  tokens: MarkdownToken[],
+  content: string,
+): Map<MarkdownToken, { start: number; end: number }> {
+  const ranges = new Map<MarkdownToken, { start: number; end: number }>()
+  let offset = 0
+  let line = 1
+  for (const token of tokens) {
+    // The footnotes extension adds a synthetic token and later moves it.
+    if (token.type === 'footnotes') continue
+    const raw = getTokenRaw(token)
+    if (!raw) continue
+    const start = content.indexOf(raw, offset)
+    if (start === -1) continue
+    line += content.slice(offset, start).split('\n').length - 1
+    ranges.set(token, {
+      start: line,
+      end: line + raw.replace(/\n+$/, '').split('\n').length - 1,
+    })
+    line += raw.split('\n').length - 1
+    offset = start + raw.length
+  }
+  return ranges
 }
 
 export function renderBlocksHtml(blocks: readonly LiveUpdateBlock[]): string {

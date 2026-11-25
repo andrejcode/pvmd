@@ -3,6 +3,14 @@ export const LIVE_BLOCK_ATTRIBUTE = 'data-pvmd-block-id'
 export interface LiveUpdateBlock {
   id: string
   html: string
+  sourceStartLine?: number
+  sourceEndLine?: number
+}
+
+export interface ScrollUpdateMessage {
+  kind: 'scroll'
+  blockId: string
+  progress: number
 }
 
 export type LiveUpdateOperation =
@@ -17,6 +25,7 @@ export type LiveUpdateOperation =
     }
 
 export type LiveUpdateMessage =
+  | ScrollUpdateMessage
   | {
       kind: 'full'
       html: string

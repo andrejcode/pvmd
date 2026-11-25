@@ -38,8 +38,19 @@ describe('Neovim input', () => {
     { type: 'update', revision: 1, content: null },
     { type: 'init', protocol: 2, revision: 1, content: '' },
     { type: 'init', protocol: 1, revision: 1, content: '', baseDir: 5 },
+    { type: 'scroll', revision: 1, line: 0 },
+    { type: 'scroll', revision: 0, line: 1 },
+    { type: 'scroll', revision: 1, line: 1.5 },
+    { type: 'scroll', revision: 1 },
+    { type: 'update', revision: 1, content: '', line: '2' },
   ])('rejects invalid messages: %j', (value) => {
     expect(() => parseNeovimMessage(JSON.stringify(value))).toThrow()
+  })
+
+  test('accepts viewport-only messages without Markdown content', () => {
+    expect(
+      parseNeovimMessage('{"type":"scroll","revision":3,"line":40}'),
+    ).toEqual({ type: 'scroll', revision: 3, line: 40 })
   })
 
   test('enforces content size in bytes and honors size overrides', () => {
@@ -67,7 +78,9 @@ describe('Neovim input', () => {
     expect(onMessage.mock.calls.map(([value]) => value.revision)).toEqual([
       1, 2,
     ])
-    expect(onMessage.mock.calls[0]?.[0].content).toBe(message.content)
+    expect(onMessage.mock.calls[0]?.[0]).toMatchObject({
+      content: message.content,
+    })
     expect(onError).not.toHaveBeenCalled()
     detach()
     input.destroy()

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Browser previews now follow Neovim's top visible source line through the companion plugin. Scroll-only updates avoid Markdown re-rendering, restore the viewport on browser reconnect, and realign after images or Mermaid diagrams change layout. Alignment within multi-line rendered blocks is approximate.
+
 ### Changed
 
 - Mermaid diagrams now use the active Markdown theme's colors and font, including dimmed, high-contrast, and colorblind themes.

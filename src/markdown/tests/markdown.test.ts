@@ -22,6 +22,36 @@ function renderMarkdown(markdown: string, httpsOnly?: boolean): string {
 }
 
 describe('renderMarkdownBlocks', () => {
+  test('maps source lines across blank lines, reference definitions, and CRLF', () => {
+    const blocks = renderMarkdownBlocks(
+      '# Heading\r\n\r\n[ref]: https://example.com\r\n\r\nFirst\r\nsecond\r\n\r\n```js\r\nx\r\ny\r\n```\r\n',
+    )
+    expect(
+      blocks.map((block) => [block.sourceStartLine, block.sourceEndLine]),
+    ).toEqual([
+      [1, 1],
+      [5, 6],
+      [8, 11],
+    ])
+  })
+
+  test('maps grouped disclosures and keeps block ids stable when lines move', () => {
+    const source =
+      '<details>\n<summary>Title</summary>\n\nInside\n\n</details>\n\n# End'
+    const before = renderMarkdownBlocks(source)
+    const after = renderMarkdownBlocks('\n\n' + source)
+    expect(
+      before.map((block) => [block.sourceStartLine, block.sourceEndLine]),
+    ).toEqual([
+      [1, 6],
+      [8, 8],
+    ])
+    expect(after.map((block) => block.id)).toEqual(
+      before.map((block) => block.id),
+    )
+    expect(after.map((block) => block.sourceStartLine)).toEqual([3, 10])
+  })
+
   // prettier-ignore
   test('should correctly parse headings', () => {
     expect(renderMarkdown('# Heading 1')).toContain('<h1 id="heading-1">Heading 1</h1>')

@@ -143,6 +143,8 @@ You should still preview only Markdown that you trust. Even with the available s
 
 The companion [pvmd-nvim](https://github.com/andrejcode/pvmd-nvim) plugin brings live Markdown previews to Neovim.
 
+The browser follows Neovim's top visible source line as you scroll. Synchronization is one-way; scrolling the browser does not move Neovim. Rendered blocks align to the source, with approximate positioning inside multi-line blocks. Set `scroll_sync = false` in the plugin configuration to disable it. Scroll synchronization requires builds of both projects that include this feature.
+
 ## License
 
 MIT

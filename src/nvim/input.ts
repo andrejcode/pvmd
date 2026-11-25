@@ -4,14 +4,19 @@ import { config } from '../cli/config'
 export const NVIM_PROTOCOL_VERSION = 1
 export const MAX_NVIM_MESSAGE_BYTES = 16 * 1024 * 1024
 
-export interface NeovimMessage {
+export interface NeovimContentMessage {
   type: 'init' | 'update'
   revision: number
   content: string
   protocol?: number
   path?: string
   baseDir?: string
+  line?: number
 }
+
+export type NeovimMessage =
+  | NeovimContentMessage
+  | { type: 'scroll'; revision: number; line: number }
 
 export function parseNeovimMessage(line: string): NeovimMessage {
   const value: unknown = JSON.parse(line)
@@ -19,6 +24,28 @@ export function parseNeovimMessage(line: string): NeovimMessage {
     throw new Error('Expected a Neovim message object')
   }
   const message = value as Record<string, unknown>
+  if (
+    message['line'] !== undefined &&
+    (!Number.isSafeInteger(message['line']) || (message['line'] as number) < 1)
+  ) {
+    throw new Error('Expected a positive source line')
+  }
+  if (message['type'] === 'scroll') {
+    if (
+      !Number.isSafeInteger(message['revision']) ||
+      (message['revision'] as number) < 1 ||
+      message['line'] === undefined
+    ) {
+      throw new Error(
+        'Expected scroll with a positive revision and source line',
+      )
+    }
+    return {
+      type: 'scroll',
+      revision: message['revision'] as number,
+      line: message['line'] as number,
+    }
+  }
   if (
     (message['type'] !== 'init' && message['type'] !== 'update') ||
     !Number.isSafeInteger(message['revision']) ||
@@ -52,7 +79,7 @@ export function parseNeovimMessage(line: string): NeovimMessage {
       `Markdown buffer exceeds ${config.maxFileSize} KB. Increase --max-size or use --no-size-check`,
     )
   }
-  return message as unknown as NeovimMessage
+  return message as unknown as NeovimContentMessage
 }
 
 export function readNeovimInput(

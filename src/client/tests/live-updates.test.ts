@@ -129,6 +129,17 @@ describe('live updates', () => {
     expect(onPatch).not.toHaveBeenCalled()
   })
 
+  test('dispatches scrolling without replacing or patching content', async () => {
+    const { connectLiveUpdates } = await loadLiveUpdates()
+    const onScroll = vi.fn()
+    connectLiveUpdates({ ...connectOptions(), onScroll })
+    const message = { kind: 'scroll', blockId: 'block-1', progress: 0.5 }
+    sendMessage(JSON.stringify(message))
+    expect(onScroll).toHaveBeenCalledWith(message)
+    expect(onFullHtml).not.toHaveBeenCalled()
+    expect(onPatch).not.toHaveBeenCalled()
+  })
+
   test('updates the disconnected alert from connection events', async () => {
     const { connectLiveUpdates } = await loadLiveUpdates()
     connectLiveUpdates(connectOptions())
